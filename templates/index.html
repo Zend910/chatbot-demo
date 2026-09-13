@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sổ Nghiên Cứu — trợ lý đọc tài liệu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/theme.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">◉</span>
+    <span class="brand-name">ChatBotAI</span>
+  </div>
+
+  <div class="notebook-switch">
+    <select id="notebookSelect" aria-label="Chọn sổ tay"></select>
+    <button id="newNotebookBtn" class="btn-ghost" title="Tạo sổ tay mới" data-i18n="newNotebook"><i class="fa-solid fa-plus"></i> Sổ mới</button>
+    <button id="deleteNotebookBtn" class="btn-ghost" title="Xóa sổ tay hiện tại"><i class="fa-solid fa-trash-can"></i></button>
+  </div>
+
+  <div class="auth-controls">
+    <span id="userBadge" class="user-badge" hidden></span>
+    <button id="settingsBtn" class="btn-ghost" data-i18n="settingsBtn"><i class="fa-solid fa-gear"></i> Cài đặt</button>
+  </div>
+</header>
+
+<div class="quota-notice" id="quotaNotice" hidden role="status">
+  <span class="quota-icon"><i class="fa-solid fa-circle-exclamation"></i></span>
+  <span id="quotaNoticeText"></span>
+  <button type="button" id="dismissQuotaNotice" aria-label="Đóng thông báo"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
+<main class="workspace" id="workspace" hidden>
+
+  <aside class="pane sources-pane">
+    <div class="pane-head">
+      <h2 data-i18n="sources">Nguồn</h2>
+      <label class="btn-primary upload-label">
+        <span data-i18n="upload">Tải lên</span>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.bmp,.tiff" hidden multiple>
+      </label>
+    </div>
+    <p class="hint">PDF (kể cả bản scan), DOCX, TXT, MD, hoặc ảnh (PNG/JPG) — ảnh scan sẽ tự động OCR</p>
+    <div class="source-tools">
+      <label class="check-all"><input type="checkbox" id="selectAllSources" checked> <span data-i18n="selectAll">Chọn tất cả</span></label>
+      <span class="selection-count" id="selectionCount"></span>
+    </div>
+    <ul class="source-list" id="sourceList"></ul>
+    <p class="empty-note" id="sourcesEmpty" data-i18n="sourcesEmpty">Chưa có tài liệu nào. Tải lên để bắt đầu.</p>
+  </aside>
+
+  <div class="resize-handle" data-resize="sources" title="Kéo để đổi độ rộng sidebar trái" aria-label="Đổi độ rộng sidebar trái"></div>
+
+  <section class="pane chat-pane">
+    <div class="chat-log" id="chatLog">
+      <div class="chat-welcome">
+        <h1>Hỏi bất cứ điều gì về nguồn của bạn</h1>
+        <p>Câu trả lời sẽ trích dẫn ngược lại đúng đoạn và tài liệu gốc.</p>
+      </div>
+    </div>
+    <form class="chat-input" id="chatForm">
+      <input type="text" id="chatInput" data-i18n-placeholder="chatPlaceholder" placeholder="Đặt câu hỏi về tài liệu…" autocomplete="off">
+      <button type="submit" class="btn-primary">Gửi</button>
+    </form>
+  </section>
+
+  <div class="resize-handle" data-resize="studio" title="Kéo để đổi độ rộng sidebar phải" aria-label="Đổi độ rộng sidebar phải"></div>
+
+  <aside class="pane studio-pane">
+    <div class="pane-head">
+      <h2 data-i18n="studio">Studio</h2>
+      <button type="button" class="studio-pane-expand" title="Phóng to"><i class="fa-solid fa-expand"></i></button>
+    </div>
+    <nav class="tabs" id="studioTabs">
+      <button class="tab active" data-tab="summary" data-i18n="summary"><i class="fa-solid fa-star"></i> Tóm tắt</button>
+      <button class="tab" data-tab="quiz" data-i18n="quiz"><i class="fa-solid fa-circle-question"></i> Quiz</button>
+      <button class="tab" data-tab="audio" data-i18n="audio"><i class="fa-solid fa-volume-high"></i> Audio</button>
+      <button class="tab" data-tab="mindmap" data-i18n="mindmap"><i class="fa-solid fa-diagram-project"></i> Mind map</button>
+      <button class="tab" data-tab="flashcards" data-i18n="flashcards"><i class="fa-solid fa-clone"></i> Flash cards</button>
+    </nav>
+    <div class="tab-panel active" id="panel-summary">
+      <div class="studio-controls">
+        <label for="summaryScope">Tài liệu tóm tắt</label>
+        <select id="summaryScope">
+          <option value="selected">Các file đã chọn</option>
+          <option value="all">Tất cả file</option>
+        </select>
+      </div>
+      <button class="btn-secondary" id="genSummaryBtn">Tạo tóm tắt tổng hợp</button>
+      <div class="studio-output markdown" id="summaryOutput"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-quiz">
+      <div class="studio-controls">
+        <label for="quizScope">Nguồn câu hỏi</label>
+        <select id="quizScope">
+          <option value="selected">Các file đã chọn</option>
+          <option value="all">Tất cả file</option>
+        </select>
+        <label for="quizTopic">Chủ đề Quiz</label>
+        <input id="quizTopic" type="text" placeholder="Ví dụ: Bài 1 - Trí tuệ nhân tạo">
+        <label for="quizDifficulty">Độ khó</label>
+        <select id="quizDifficulty">
+          <option value="easy">Dễ</option>
+          <option value="medium" selected>Trung bình</option>
+          <option value="hard">Khó</option>
+        </select>
+        <label for="quizCount">Số câu hỏi</label>
+        <input id="quizCount" type="number" min="1" max="20" value="6">
+      </div>
+      <button class="btn-secondary" id="genQuizBtn">Tạo bộ câu hỏi ôn tập</button>
+      <div class="studio-output" id="quizOutput"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-audio">
+      <div class="studio-controls">
+        <label for="audioScope">Tài liệu tạo audio</label>
+        <select id="audioScope">
+          <option value="selected">Các file đã chọn</option>
+          <option value="all">Tất cả file</option>
+        </select>
+      </div>
+      <button class="btn-secondary" id="genAudioBtn">Tạo audio overview</button>
+      <p class="hint">Kịch bản 2 người dẫn, đọc bằng giọng TTS có sẵn trên máy bạn.</p>
+      <div class="studio-output" id="audioOutput"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-mindmap">
+      <div class="studio-controls">
+        <label for="mindmapScope">Nguồn mind map</label>
+        <select id="mindmapScope">
+          <option value="selected">Các file đã chọn</option>
+          <option value="all">Tất cả file</option>
+        </select>
+        <label for="mindmapTopic">Chủ đề</label>
+        <input id="mindmapTopic" type="text" placeholder="Ví dụ: Bài 3 - Thiết bị mạng">
+      </div>
+      <button class="btn-secondary" id="genMindmapBtn">Tạo mind map</button>
+      <div class="studio-output" id="mindmapOutput"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-flashcards">
+      <div class="studio-controls">
+        <label for="flashcardScope">Nguồn flashcard</label>
+        <select id="flashcardScope">
+          <option value="selected">Các file đã chọn</option>
+          <option value="all">Tất cả file</option>
+        </select>
+        <label for="flashcardTopic">Chủ đề</label>
+        <input id="flashcardTopic" type="text" placeholder="Ví dụ: Bài 3 - Thiết bị mạng">
+        <label for="flashcardCount">Số thẻ</label>
+        <input id="flashcardCount" type="number" min="2" max="30" value="10">
+      </div>
+      <button class="btn-secondary" id="genFlashcardsBtn">Tạo flashcards</button>
+      <div class="studio-output" id="flashcardsOutput"></div>
+    </div>
+    <section class="studio-history-section" aria-label="Sản phẩm đã lưu">
+      <div class="studio-history-heading" data-i18n="generated">Đã lưu trong notebook</div>
+      <div class="studio-history" id="studioHistory"></div>
+    </section>
+    <footer class="studio-footer">Bản quyền thuộc về:Trương Thanh Phong</footer>
+  </aside>
+
+</main>
+
+<div class="empty-state" id="emptyState">
+  <h1>Chưa có sổ tay nào</h1>
+  <p>Tạo một sổ tay để bắt đầu tải tài liệu lên và trò chuyện với chúng.</p>
+  <button class="btn-primary" id="emptyCreateBtn">Tạo sổ tay đầu tiên</button>
+</div>
+
+<!-- Modal: sổ tay mới -->
+<div class="modal-backdrop" id="newNotebookModal" hidden>
+  <div class="modal">
+    <h3 data-i18n="newNotebookModal">Sổ tay mới</h3>
+    <input type="text" id="newNotebookName" placeholder="Ví dụ: Luận văn tốt nghiệp">
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" data-close>Hủy</button>
+      <button type="button" class="btn-primary" id="createNotebookBtn">Tạo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: đăng nhập / đăng ký -->
+<div class="modal-backdrop" id="authModal" hidden>
+  <div class="modal auth-modal">
+    <div class="auth-tabs">
+      <button type="button" class="auth-tab active" data-auth-tab="login" data-i18n="login">Đăng nhập</button>
+      <button type="button" class="auth-tab" data-auth-tab="register" data-i18n="register">Đăng ký</button>
+    </div>
+
+    <form id="authForm">
+      <label class="field-label" id="authIdentifierLabel" for="authIdentifier">Username hoặc email</label>
+      <input id="authIdentifier" type="text" name="identifier" placeholder="username hoặc you@example.com" required>
+      <label class="field-label" id="authUsernameLabel" for="authUsername" hidden>Username</label>
+      <input id="authUsername" type="text" name="username" placeholder="Tên hiển thị khi đăng nhập" hidden>
+
+      <label class="field-label" for="authPassword">Mật khẩu</label>
+      <input id="authPassword" type="password" name="password" placeholder="Nhập mật khẩu" required>
+
+      <label class="field-label" for="authConfirmPassword" id="confirmPasswordLabel" hidden>Xác nhận mật khẩu</label>
+      <input id="authConfirmPassword" type="password" name="confirmPassword" placeholder="Nhập lại mật khẩu" hidden>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" data-close>Hủy</button>
+        <button type="submit" class="btn-primary" id="submitAuthBtn">Đăng nhập</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: quản trị admin -->
+<div class="modal-backdrop" id="adminModal" hidden>
+  <div class="modal admin-modal">
+    <div class="admin-header">
+      <h3>Quản trị & Quản lý API</h3>
+      <button type="button" class="btn-ghost btn-close" data-close title="Đóng">×</button>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="notebooks"><i class="fa-solid fa-book"></i> Quản lý Notebook</button>
+      <button class="admin-tab" data-tab="api-keys"><i class="fa-solid fa-key"></i> API Keys</button>
+    </div>
+
+    <div class="admin-content">
+      <!-- Tab: Quản lý Notebook -->
+      <div class="admin-panel active" id="panel-notebooks">
+        <p class="hint">Danh sách toàn bộ notebook của người dùng trong hệ thống.</p>
+        <div id="adminNotebookList" class="admin-list"></div>
+      </div>
+
+      <!-- Tab: API Keys -->
+      <div class="admin-panel" id="panel-api-keys">
+        <h4>Google AI API key (miễn phí)</h4>
+        <label class="field-label" for="apiKeyInput">API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="AIza...">
+        <label class="field-label" for="modelInput">Model</label>
+        <input type="text" id="modelInput" placeholder="gemini-3.6-flash">
+
+        <h4 style="margin-top: 16px;">OpenAI / ChatGPT</h4>
+        <label class="field-label" for="openaiKeyInput">API Key</label>
+        <input type="password" id="openaiKeyInput" placeholder="sk-...">
+        <label class="field-label" for="openaiModelInput">Model</label>
+        <input type="text" id="openaiModelInput" placeholder="gpt-4o-mini">
+
+        <h4 style="margin-top: 16px;">OpenRouter</h4>
+        <label class="field-label" for="openrouterKeyInput">API Key</label>
+        <input type="password" id="openrouterKeyInput" placeholder="sk-or-v1-...">
+        <label class="field-label" for="openrouterModelInput">Model</label>
+        <input type="text" id="openrouterModelInput" placeholder="openai/gpt-4o-mini">
+
+        <h4 style="margin-top: 16px;">Anthropic / Claude</h4>
+        <label class="field-label" for="anthropicKeyInput">API Key</label>
+        <input type="password" id="anthropicKeyInput" placeholder="sk-ant-...">
+        <label class="field-label" for="anthropicModelInput">Model</label>
+        <input type="text" id="anthropicModelInput" placeholder="claude-3-5-haiku-latest">
+
+        <h4 style="margin-top: 16px;">GitHub Token (Copilot)</h4>
+        <label class="field-label" for="githubTokenInput">Token</label>
+        <input type="password" id="githubTokenInput" placeholder="ghp_... hoặc token GitHub">
+        <p class="hint">Copilot thường xác thực qua tài khoản GitHub/VS Code, không dùng API key Copilot riêng. Các key chỉ được lưu cục bộ trên máy.</p>
+
+        <p class="hint" style="margin-top: 16px;">Lấy key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Key được lưu cục bộ trong data/config.json trên máy bạn.</p>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" data-close>Đóng</button>
+      <button type="button" class="btn-primary" id="saveAdminSettingsBtn">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: cài đặt -->
+<div class="modal-backdrop" id="settingsModal" hidden>
+  <div class="modal settings-modal">
+    <div class="settings-header">
+      <h3>Cài đặt</h3>
+      <button type="button" class="btn-ghost btn-close" data-close title="Đóng">×</button>
+    </div>
+    
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-tab="account" data-i18n="account"><i class="fa-solid fa-user"></i> Tài khoản</button>
+      <button class="settings-tab" data-tab="appearance" data-i18n="appearance"><i class="fa-solid fa-palette"></i> Giao diện</button>
+      <button class="settings-tab" data-tab="privacy" data-i18n="privacy"><i class="fa-solid fa-shield-halved"></i> Quyền riêng tư</button>
+      <button class="settings-tab" data-tab="personalization" data-i18n="personalization"><i class="fa-solid fa-wand-sparkles"></i> Cá nhân hóa</button>
+      <button class="settings-tab" data-tab="developer" data-i18n="developer"><i class="fa-solid fa-code"></i> Nhà phát triển</button>
+      <button class="settings-tab" data-tab="help" data-i18n="help"><i class="fa-solid fa-circle-question"></i> Trợ giúp</button>
+    </div>
+
+    <div class="settings-content">
+      <!-- Tab: Tài khoản -->
+      <div class="settings-panel active" id="panel-account">
+        <h4 data-i18n="accountSettings">Thông tin cá nhân</h4>
+        <label class="field-label" for="usernameDisplay" data-i18n="userName">Tên người dùng</label>
+        <input type="text" id="usernameDisplay" readonly>
+
+        <label class="field-label" for="emailInput" data-i18n="email">Địa chỉ email</label>
+        <input type="email" id="emailInput" readonly placeholder="Chưa cập nhật email">
+
+        <h4 style="margin-top: 16px;" data-i18n="security">Bảo mật</h4>
+        <button type="button" class="btn-secondary" id="changePasswordBtn" style="width: 100%;" data-i18n="changePassword">Đổi mật khẩu</button>
+        <button type="button" class="btn-secondary" id="accountLogoutBtn" style="width: 100%; margin-top: 8px;" data-i18n="logout">Đăng xuất tài khoản</button>
+      </div>
+
+      <!-- Tab: Giao diện -->
+      <div class="settings-panel" id="panel-appearance">
+        <h4 data-i18n="theme">Chủ đề</h4>
+        <label class="field-label" data-i18n="themeSelectLabel">Chế độ hiển thị</label>
+        <select id="themeSelect" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 12px;">
+          <option value="auto" data-i18n="autoMode">🔄 Đồng bộ theo hệ thống</option>
+          <option value="light" data-i18n="lightMode">☀️ Sáng (Light mode)</option>
+          <option value="dark" data-i18n="darkMode">🌙 Tối (Dark mode)</option>
+        </select>
+
+        <h4 style="margin-top: 16px;" data-i18n="language">Ngôn ngữ</h4>
+        <select id="languageSelect" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 12px;">
+          <option value="vi" data-i18n="vietnamese">Tiếng Việt</option>
+          <option value="en" data-i18n="english">English</option>
+        </select>
+      </div>
+
+      <!-- Tab: Quyền riêng tư -->
+      <div class="settings-panel" id="panel-privacy">
+        <h4>Lịch sử trò chuyện</h4>
+        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+          <input type="checkbox" id="saveChatHistory" checked>
+          <span>Lưu lại lịch sử cuộc trò chuyện</span>
+        </label>
+
+        <h4 style="margin-top: 16px;">Huấn luyện mô hình</h4>
+        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+          <input type="checkbox" id="allowModelTraining">
+          <span>Cho phép sử dụng dữ liệu của tôi để cải thiện AI</span>
+        </label>
+
+        <h4 style="margin-top: 16px;">Quản lý dữ liệu</h4>
+        <button type="button" class="btn-secondary" id="clearChatHistoryBtn" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-trash-can"></i> Xóa lịch sử trò chuyện</button>
+        <button type="button" class="btn-secondary danger" style="width: 100%; margin-top: 8px; background: #ff6b6b; color: white; border-color: #ff6b6b;"><i class="fa-solid fa-triangle-exclamation"></i> Xóa tài khoản vĩnh viễn</button>
+      </div>
+
+      <!-- Tab: Cá nhân hóa -->
+      <div class="settings-panel" id="panel-personalization">
+        <h4>Hướng dẫn tùy chỉnh</h4>
+        <label class="field-label" for="customInstructions">Hãy cho tôi biết về bạn và cách bạn muốn AI trả lời</label>
+        <textarea id="customInstructions" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); min-height: 120px; resize: vertical;" placeholder="Ví dụ: Tôi là học sinh, hãy trả lời như một người bạn cùng bàn, thân thiện, ngắn gọn và dễ hiểu."></textarea>
+
+        <h4 style="margin-top: 16px;">Bộ nhớ AI</h4>
+        <p class="hint">AI sẽ tự động ghi nhớ các chi tiết quan trọng từ cuộc trò chuyện.</p>
+        <button type="button" class="btn-secondary" id="viewAiMemoryBtn" style="width: 100%;"><i class="fa-solid fa-brain"></i> Xem những gì AI nhớ về bạn</button>
+        <button type="button" class="btn-secondary" id="clearAiMemoryBtn" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-eraser"></i> Xóa bộ nhớ</button>
+      </div>
+
+      <!-- Tab: Nhà phát triển -->
+      <div class="settings-panel" id="panel-developer">
+        <h4 style="margin-top: 16px;">API Key cá nhân</h4>
+        <label class="field-label" for="personalApiKeyInput">API Key riêng của bạn</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="password" id="personalApiKeyInput" placeholder="AIza... hoặc sk-..." style="flex: 1;">
+          <button type="button" class="btn-ghost" id="togglePersonalApiKeyBtn" title="Hiển thị/Ẩn mật khẩu" aria-label="Hiển thị/Ẩn mật khẩu"><i class="fa-solid fa-eye"></i></button>
+        </div>
+        <button type="button" class="btn-secondary" id="savePersonalApiKeyBtn" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-floppy-disk"></i> Lưu API Key</button>
+
+        <h4 style="margin-top: 16px;">Model & Nhà cung cấp</h4>
+        <label class="field-label" for="personalModelInput">Model mặc định</label>
+        <input type="text" id="personalModelInput" placeholder="gemini-2.5-flash">
+        <label class="field-label" for="personalProviderSelect">Nhà cung cấp</label>
+        <select id="personalProviderSelect" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 12px;">
+          <option value="auto">Tự động</option>
+          <option value="gemini">Google AI Studio</option>
+          <option value="openai">OpenAI</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="anthropic">Anthropic</option>
+        </select>
+
+        <h4 style="margin-top: 16px;">Hạn mức sử dụng</h4>
+        <div class="usage-stats">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span>Tokens đã dùng</span>
+            <strong><span id="tokensUsedText">0</span> / <span id="tokensLimitText">100,000</span></strong>
+          </div>
+          <div style="height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; border: 1px solid var(--line);">
+            <div id="tokenUsageBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #7c9cff, #4de0c3); transition: width 0.2s ease;"></div>
+          </div>
+          <p style="margin-top: 12px; margin-bottom: 0;"><strong>API calls:</strong> <span id="apiCallsText">0</span> today</p>
+        </div>
+
+        <h4 style="margin-top: 16px;">📌 Ghi chú</h4>
+        <p class="hint">Các API key được quản lý trong <strong>Quản trị (Admin)</strong> để bảo mật tốt hơn.</p>
+        <button type="button" class="btn-secondary" style="width: 100%;" id="goToAdminBtn"><i class="fa-solid fa-screwdriver-wrench"></i> Đi tới Quản trị</button>
+      </div>
+
+      <!-- Tab: Trợ giúp -->
+      <div class="settings-panel" id="panel-help">
+        <h4>Trung tâm trợ giúp</h4>
+        <button type="button" class="btn-secondary" style="width: 100%;"><i class="fa-solid fa-book-open"></i> Hướng dẫn sử dụng</button>
+        <button type="button" class="btn-secondary" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-circle-question"></i> FAQ</button>
+
+        <h4 style="margin-top: 16px;">Phản hồi & Hỗ trợ</h4>
+        <button type="button" class="btn-secondary" style="width: 100%;"><i class="fa-solid fa-bug"></i> Báo cáo lỗi</button>
+        <button type="button" class="btn-secondary" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-lightbulb"></i> Gửi đề xuất</button>
+
+        <h4 style="margin-top: 16px;">Thông tin pháp lý</h4>
+        <button type="button" class="btn-secondary" style="width: 100%;"><i class="fa-solid fa-file-contract"></i> Điều khoản dịch vụ</button>
+        <button type="button" class="btn-secondary" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-lock"></i> Chính sách quyền riêng tư</button>
+        <p class="hint" style="margin-top: 12px;"><strong>Phiên bản ứng dụng:</strong> v1.0.0 (2026)</p>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" data-close data-i18n="close">Đóng</button>
+      <button type="button" class="btn-primary" id="saveSettingsBtn" data-i18n="save">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="passwordModal" hidden>
+  <div class="modal">
+    <h3><i class="fa-solid fa-key"></i> Đổi mật khẩu</h3>
+    <p class="hint">Email của bạn phải được xác thực trước khi đổi mật khẩu.</p>
+    <label class="field-label" for="currentPasswordInput">Mật khẩu hiện tại</label>
+    <input type="password" id="currentPasswordInput" autocomplete="current-password">
+    <label class="field-label" for="newPasswordInput">Mật khẩu mới</label>
+    <input type="password" id="newPasswordInput" autocomplete="new-password">
+    <label class="field-label" for="confirmNewPasswordInput">Xác nhận mật khẩu mới</label>
+    <input type="password" id="confirmNewPasswordInput" autocomplete="new-password">
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" data-close>Hủy</button>
+      <button type="button" class="btn-primary" id="confirmChangePasswordBtn">Đổi mật khẩu</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="aiMemoryModal" hidden>
+  <div class="modal ai-memory-modal">
+    <div class="settings-header" style="margin-bottom: 10px;">
+      <h3>AI Memory</h3>
+      <button type="button" class="btn-ghost btn-close" data-close title="Đóng">×</button>
+    </div>
+    <div id="aiMemoryList" class="ai-memory-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="/static/firebase-config.js"></script>
+<script src="/static/firebase-auth.js"></script>
+
+<script src="/static/app.js?v=studio-delete-20260912-2"></script>
+</body>
+</html>

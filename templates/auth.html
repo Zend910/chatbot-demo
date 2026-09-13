@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ 'Đăng ký' if mode == 'register' else 'Đăng nhập' }} — Sổ Nghiên Cứu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/theme.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+</head>
+<body class="landing-mode auth-page" data-auth-mode="{{ mode }}">
+
+<section class="auth-shell">
+  <div class="landing-backdrop"></div>
+
+  <div class="auth-card">
+    <a class="auth-brand" href="/">
+      <span class="brand-mark">◉</span>
+      <span>ChatBotAI</span>
+    </a>
+
+    {% if mode == 'register' %}
+    <div id="registerView">
+      <h1 class="auth-title">Đăng ký</h1>
+      <p class="auth-subtitle">Tạo tài khoản để bắt đầu dùng Sổ Nghiên Cứu</p>
+
+      <form id="registerForm" class="auth-form" autocomplete="off">
+        <label class="field-label" for="authUsername">Username</label>
+        <div class="input-icon-group">
+          <input id="authUsername" type="text" placeholder="Tên hiển thị khi đăng nhập" required>
+          <i class="fa-solid fa-user"></i>
+        </div>
+
+        <label class="field-label" for="authIdentifier">Email</label>
+        <div class="input-icon-group">
+          <input id="authIdentifier" type="email" placeholder="you@example.com" required>
+          <i class="fa-solid fa-envelope"></i>
+        </div>
+
+        <label class="field-label" for="authPassword">Mật khẩu</label>
+        <div class="input-icon-group">
+          <input id="authPassword" type="password" placeholder="Ít nhất 6 ký tự" required>
+          <i class="fa-solid fa-lock"></i>
+        </div>
+
+        <label class="field-label" for="authConfirmPassword">Xác nhận mật khẩu</label>
+        <div class="input-icon-group">
+          <input id="authConfirmPassword" type="password" placeholder="Nhập lại mật khẩu" required>
+          <i class="fa-solid fa-lock"></i>
+        </div>
+
+        <label class="check-row terms-row">
+          <input type="checkbox" id="agreeTermsCheckbox" checked>
+          <span>Tôi đồng ý với điều khoản &amp; điều kiện</span>
+        </label>
+
+        <button type="submit" class="btn-primary auth-submit" id="submitAuthBtn">Đăng ký</button>
+      </form>
+
+      <div class="auth-divider"><span>hoặc</span></div>
+
+      <div class="social-row">
+        <button type="button" class="social-btn" id="googleLoginBtn"><i class="fa-brands fa-google"></i> Google</button>
+        <button type="button" class="social-btn" id="facebookLoginBtn"><i class="fa-brands fa-facebook"></i> Facebook</button>
+      </div>
+
+      <p class="auth-switch">Đã có tài khoản? <a href="/login">Đăng nhập</a></p>
+    </div>
+
+    {% else %}
+    <div id="loginView">
+      <h1 class="auth-title">Đăng nhập</h1>
+      <p class="auth-subtitle">Chào mừng trở lại Sổ Nghiên Cứu</p>
+
+      <form id="loginForm" class="auth-form" autocomplete="off">
+        <label class="field-label" for="authIdentifier">Username hoặc email</label>
+        <div class="input-icon-group">
+          <input id="authIdentifier" type="text" placeholder="username hoặc you@example.com" required>
+          <i class="fa-solid fa-envelope"></i>
+        </div>
+
+        <label class="field-label" for="authPassword">Mật khẩu</label>
+        <div class="input-icon-group">
+          <input id="authPassword" type="password" placeholder="Nhập mật khẩu" required>
+          <i class="fa-solid fa-lock"></i>
+        </div>
+
+        <div class="auth-row-between">
+          <label class="check-row">
+            <input type="checkbox" id="rememberMeCheckbox" checked>
+            <span>Ghi nhớ đăng nhập</span>
+          </label>
+          <button type="button" class="link-btn" id="forgotPasswordLink">Quên mật khẩu?</button>
+        </div>
+
+        <button type="submit" class="btn-primary auth-submit" id="submitAuthBtn">Đăng nhập</button>
+      </form>
+
+      <div class="auth-divider"><span>hoặc</span></div>
+
+      <div class="social-row">
+        <button type="button" class="social-btn" id="googleLoginBtn"><i class="fa-brands fa-google"></i> Google</button>
+        <button type="button" class="social-btn" id="facebookLoginBtn"><i class="fa-brands fa-facebook"></i> Facebook</button>
+      </div>
+
+      <p class="auth-switch">Chưa có tài khoản? <a href="/register">Đăng ký</a></p>
+    </div>
+
+    <div id="forgotView" hidden>
+      <h1 class="auth-title">Quên mật khẩu</h1>
+      <p class="auth-subtitle">Nhập username hoặc email — hệ thống sẽ gửi một liên kết xác thực để bạn đặt lại mật khẩu.</p>
+
+      <div class="auth-form">
+        <label class="field-label" for="forgotEmail">Username hoặc email</label>
+        <div class="input-icon-group">
+          <input id="forgotEmail" type="text" placeholder="username hoặc you@example.com">
+          <i class="fa-solid fa-envelope"></i>
+        </div>
+
+        <button type="button" class="btn-primary auth-submit" id="sendResetBtn">Gửi email đặt lại mật khẩu</button>
+        <button type="button" class="link-btn back-link" id="backToLoginBtn"><i class="fa-solid fa-arrow-left"></i> Quay lại đăng nhập</button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="creator-strip reveal-up">
+    <span>Bản quyền: Trương Thanh Phong</span>
+  </div>
+</section>
+
+<div class="toast" id="toast" hidden></div>
+<script src="/static/firebase-config.js"></script>
+<script src="/static/firebase-auth.js"></script>
+<script src="/static/auth.js"></script>
+</body>
+</html>

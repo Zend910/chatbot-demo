@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản trị hệ thống</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/theme.js"></script>
+  <style>
+    .admin-page {
+      background: #111316;
+      color: #edf2fa;
+      min-height: 100vh;
+    }
+
+    .admin-shell {
+      max-width: 1280px;
+      margin: 24px auto;
+      padding: 0 20px 40px;
+    }
+
+    .admin-topbar {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 16px 20px;
+      border: 1px solid #2e323a;
+      border-radius: 18px;
+      background: #17191d;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .admin-topbar .brand {
+      flex-shrink: 0;
+    }
+
+    .admin-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(167, 199, 255, 0.12);
+      color: #a7c7ff;
+      border: 1px solid rgba(167, 199, 255, 0.2);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .admin-main {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 22px;
+      margin-top: 24px;
+    }
+
+    .admin-sidebar {
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .sidebar-card,
+    .panel {
+      background: #1d2025;
+      border: 1px solid #2e323a;
+      border-radius: 20px;
+      box-shadow: 0 16px 28px rgba(0, 0, 0, 0.08);
+    }
+
+    .sidebar-card {
+      padding: 20px;
+    }
+
+    .mini-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #a7c7ff;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .sidebar-card h2 {
+      margin: 0 0 18px;
+      font-size: 24px;
+      line-height: 1.2;
+      font-family: "Manrope", sans-serif;
+      color: #f5f7fb;
+    }
+
+    .sidebar-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .sidebar-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #232933, #1d2229);
+      color: #dfe6f3;
+      border: 1px solid rgba(124, 136, 156, 0.2);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .sidebar-list li:hover {
+      transform: translateY(-1px);
+      border-color: rgba(167, 199, 255, 0.35);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.12);
+      background: linear-gradient(135deg, #2a303b, #1f2630);
+    }
+
+    .sidebar-list li.active {
+      background: linear-gradient(135deg, rgba(167, 199, 255, 0.14), rgba(167, 199, 255, 0.06));
+      border-color: rgba(167, 199, 255, 0.35);
+      color: #f1f5ff;
+      box-shadow: 0 12px 22px rgba(67, 102, 150, 0.18);
+    }
+
+    .card-icon {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: rgba(167, 199, 255, 0.12);
+      color: #a7c7ff;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .stat-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: #1d2025;
+      border: 1px solid #2e323a;
+      border-radius: 18px;
+      padding: 18px 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .stat-label {
+      color: #a3aab6;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #f5f7fb;
+      font-family: "Manrope", sans-serif;
+    }
+
+    .admin-content {
+      display: grid;
+      gap: 22px;
+    }
+
+    .admin-section {
+      display: none;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .admin-section.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .panel {
+      padding: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-family: "Manrope", sans-serif;
+      color: #f5f7fb;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border: 1px solid #454b56;
+      background: #22262d;
+      border-radius: 12px;
+    }
+
+    .search-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #edf2fa;
+      font: inherit;
+      min-height: 32px;
+    }
+
+    .search-row input::placeholder {
+      color: #7f8794;
+    }
+
+    .search-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      background: #22262d;
+      border: 1px solid #454b56;
+      border-radius: 999px;
+      padding: 4px;
+    }
+
+    .filter-chip {
+      border: none;
+      background: transparent;
+      color: #a3aab6;
+      border-radius: 999px;
+      padding: 7px 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip.active {
+      background: #a7c7ff;
+      color: #10151c;
+    }
+
+    .result-count {
+      color: #a3aab6;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .field label {
+      color: #c7d0df;
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 44px;
+      padding: 11px 12px;
+      border: 1px solid #454b56;
+      border-radius: 12px;
+      background: #22262d;
+      color: #edf2fa;
+      font: inherit;
+    }
+
+    .field input::placeholder {
+      color: #7f8794;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid #2e323a;
+      vertical-align: middle;
+    }
+
+    th {
+      color: #a3aab6;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: #1a1d22;
+    }
+
+    td {
+      color: #e7ecf2;
+      font-size: 14px;
+    }
+
+    .role-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(167, 199, 255, 0.12);
+      border: 1px solid rgba(167, 199, 255, 0.2);
+      color: #a7c7ff;
+      text-transform: capitalize;
+    }
+
+    .role-pill.admin {
+      background: rgba(246, 200, 95, 0.12);
+      border-color: rgba(246, 200, 95, 0.3);
+      color: #f6c85f;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #a3aab6;
+    }
+
+    .muted-area {
+      color: #a3aab6;
+      font-size: 14px;
+      text-align: center;
+      padding: 20px 10px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      background: #1f2a22;
+      border: 1px solid rgba(166, 214, 180, 0.35);
+      color: #edf9f0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
+      font-size: 0.95rem;
+      z-index: 30;
+    }
+
+    .toast-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 12, 16, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+      padding: 20px;
+    }
+
+    .toast-modal-card {
+      width: min(480px, 100%);
+      background: #1d2025;
+      border: 1px solid #2e323a;
+      border-radius: 20px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25);
+      padding: 22px;
+    }
+
+    .toast-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .toast-modal-header h3 {
+      margin: 0;
+      font-size: 24px;
+      font-family: "Manrope", sans-serif;
+      color: #f5f7fb;
+    }
+
+    .close-modal {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid #454b56;
+      background: #22262d;
+      color: #edf2fa;
+      cursor: pointer;
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    @media (max-width: 900px) {
+      .admin-main {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-topbar {
+        flex-wrap: wrap;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body class="admin-page">
+  <div class="admin-shell">
+    <header class="admin-topbar">
+      <div class="brand">
+        <span class="brand-mark">◉</span>
+        <span class="brand-name">ChatBotAI</span>
+      </div>
+      <span class="admin-badge">Admin dashboard</span>
+      <div class="header-actions">
+        <a href="/" class="btn-ghost">← Về app</a>
+        <button id="logoutBtn" class="btn-primary">Đăng xuất</button>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <aside class="admin-sidebar">
+        <div class="sidebar-card">
+          <div class="mini-label">Tổng quan</div>
+          <h2>Quản trị trung tâm</h2>
+          <ul class="sidebar-list">
+            <li class="active" data-section="users">
+              <span class="card-icon"><i class="fa-solid fa-user"></i></span>
+              <span>Người dùng</span>
+            </li>
+            <li data-section="roles">
+              <span class="card-icon"><i class="fa-solid fa-shield-halved"></i></span>
+              <span>Phân quyền</span>
+            </li>
+            <li data-section="notebooks">
+              <span class="card-icon"><i class="fa-solid fa-book"></i></span>
+              <span>Notebook</span>
+            </li>
+            <li data-section="documents">
+              <span class="card-icon"><i class="fa-solid fa-file-lines"></i></span>
+              <span>Tài liệu</span>
+            </li>
+            <li data-section="api-keys">
+              <span class="card-icon"><i class="fa-solid fa-key"></i></span>
+              <span>API Keys</span>
+            </li>
+            
+          </ul>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <span class="stat-label">Tổng tài khoản</span>
+            <span class="stat-value" id="totalUsers">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Admin</span>
+            <span class="stat-value" id="totalAdmins">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Notebook</span>
+            <span class="stat-value" id="totalNotebooks">0</span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="admin-content">
+        <section class="panel admin-section active" data-panel="users">
+          <div class="panel-header">
+            <h2>Thêm tài khoản mới</h2>
+          </div>
+          <form id="createUserForm">
+            <div class="field">
+              <label for="newUsername">Tên đăng nhập</label>
+              <input id="newUsername" type="text" placeholder="Ví dụ: user01" required>
+            </div>
+            <div class="field">
+              <label for="newEmail">Email (tùy chọn)</label>
+              <input id="newEmail" type="email" placeholder="user@example.com">
+              <span class="small">Có email: tạo tài khoản Firebase. Bỏ trống: tạo tài khoản local.</span>
+            </div>
+            <div class="field">
+              <label for="newPassword">Mật khẩu</label>
+              <input id="newPassword" type="password" placeholder="Nhập mật khẩu" required>
+            </div>
+            <div class="field">
+              <label for="newRole">Vai trò</label>
+              <select id="newRole">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary">Thêm tài khoản</button>
+          </form>
+
+          <div class="panel-header" style="margin-top: 24px;">
+            <h2>Danh sách tài khoản</h2>
+          </div>
+          <div class="search-row">
+            <span><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input id="userSearchInput" type="text" placeholder="Tìm theo username hoặc email...">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Vai trò</th>
+                  <th>Ngày tạo</th>
+                  <th>Notebook</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="userTableBody">
+                <tr><td colspan="6" class="muted-area">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel admin-section" data-panel="roles">
+          <div class="panel-header">
+            <h2>Phân quyền người dùng</h2>
+          </div>
+          <div class="search-row">
+            <span><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input id="roleSearchInput" type="text" placeholder="Tìm kiếm tên hoặc role...">
+          </div>
+          <div class="search-meta">
+            <div class="filter-group" aria-label="Lọc theo vai trò">
+              <button type="button" class="filter-chip active" data-role-filter="all">Tất cả</button>
+              <button type="button" class="filter-chip" data-role-filter="admin">Admin</button>
+              <button type="button" class="filter-chip" data-role-filter="user">User</button>
+            </div>
+            <span class="result-count" id="roleResultCount">0 kết quả</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Vai trò</th>
+                  <th>Ngày tạo</th>
+                  <th>Notebook</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="roleTableBody">
+                <tr><td colspan="5" class="muted-area">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel admin-section" data-panel="notebooks">
+          <div class="panel-header">
+            <h2>Quản lý sổ tay</h2>
+          </div>
+          <form id="createNotebookForm">
+            <div class="field">
+              <label for="newNotebookName">Tên sổ tay</label>
+              <input id="newNotebookName" type="text" placeholder="Ví dụ: Bài 1 - AI" required>
+            </div>
+            <div class="field">
+              <label for="newNotebookOwner">Chủ sở hữu</label>
+              <select id="newNotebookOwner"></select>
+            </div>
+            <button type="submit" class="btn-primary">Thêm sổ tay</button>
+          </form>
+
+          <div class="panel-header" style="margin-top: 24px;">
+            <h2>Danh sách sổ tay</h2>
+          </div>
+          <div class="search-row">
+            <span><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input id="notebookSearchInput" type="text" placeholder="Tìm kiếm sổ tay hoặc người dùng...">
+          </div>
+          <div class="search-meta">
+            <span class="result-count" id="notebookResultCount">0 kết quả</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tên sổ tay</th>
+                  <th>Chủ sở hữu</th>
+                  <th>Ngày tạo</th>
+                  <th>Tài liệu</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="notebookTableBody">
+                <tr><td colspan="5" class="muted-area">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel admin-section" data-panel="documents">
+          <div class="panel-header">
+            <h2>Tài liệu người dùng</h2>
+          </div>
+          <div class="search-row">
+            <span><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input id="documentSearchInput" type="text" placeholder="Tìm theo tên tài liệu, notebook hoặc người dùng...">
+          </div>
+          <div class="search-meta"><span class="result-count" id="documentResultCount">0 kết quả</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tài liệu</th><th>Notebook</th><th>Người dùng</th><th>Email</th><th>Loại</th><th>Thao tác</th></tr></thead>
+              <tbody id="documentTableBody"><tr><td colspan="6" class="muted-area">Đang tải...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel admin-section" data-panel="api-keys">
+          <div class="panel-header">
+            <h2>Quản lý API Keys</h2>
+          </div>
+          <p class="small">Các key được lưu cục bộ trong data/config.json trên máy chủ.</p>
+          <form id="apiConfigForm">
+            <div class="field">
+              <label for="adminGoogleApiKey">Google AI API key <span id="googleKeyStatus" class="small"></span></label>
+              <input id="adminGoogleApiKey" type="password" placeholder="AIza...">
+            </div>
+            <div class="field">
+              <label for="adminGoogleModel">Google model</label>
+              <input id="adminGoogleModel" type="text" placeholder="gemini-3.6-flash">
+            </div>
+            <div class="field">
+              <label for="adminOpenaiApiKey">OpenAI API key <span id="openaiKeyStatus" class="small"></span></label>
+              <input id="adminOpenaiApiKey" type="password" placeholder="sk-...">
+            </div>
+            <div class="field">
+              <label for="adminOpenaiModel">OpenAI model</label>
+              <input id="adminOpenaiModel" type="text" placeholder="gpt-4o-mini">
+            </div>
+            <div class="field">
+              <label for="adminOpenrouterApiKey">OpenRouter API key <span id="openrouterKeyStatus" class="small"></span></label>
+              <input id="adminOpenrouterApiKey" type="password" placeholder="sk-or-v1-...">
+            </div>
+            <div class="field">
+              <label for="adminOpenrouterModel">OpenRouter model</label>
+              <input id="adminOpenrouterModel" type="text" placeholder="openai/gpt-4o-mini">
+            </div>
+            <div class="field">
+              <label for="adminAnthropicApiKey">Anthropic API key <span id="anthropicKeyStatus" class="small"></span></label>
+              <input id="adminAnthropicApiKey" type="password" placeholder="sk-ant-...">
+            </div>
+            <div class="field">
+              <label for="adminAnthropicModel">Anthropic model</label>
+              <input id="adminAnthropicModel" type="text" placeholder="claude-3-5-haiku-latest">
+            </div>
+            <div class="field">
+              <label for="adminGithubToken">GitHub token <span id="githubKeyStatus" class="small"></span></label>
+              <input id="adminGithubToken" type="password" placeholder="ghp_...">
+            </div>
+            <button type="submit" class="btn-primary">Lưu cấu hình API</button>
+          </form>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <div id="passwordModal" class="toast-modal" hidden>
+    <div class="toast-modal-card">
+      <div class="toast-modal-header">
+        <h3>Đổi mật khẩu</h3>
+        <button type="button" class="close-modal" id="closePasswordModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="passwordForm">
+        <div class="field">
+          <label for="editPasswordUser">Tài khoản</label>
+          <input id="editPasswordUser" type="text" readonly>
+        </div>
+        <div class="field">
+          <label for="editPasswordInput">Mật khẩu mới</label>
+          <input id="editPasswordInput" type="password" placeholder="Nhập mật khẩu mới" minlength="6" required>
+        </div>
+        <button type="submit" class="btn-primary">Lưu mật khẩu</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const toastEl = document.getElementById('toast');
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.hidden = false;
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toastEl.hidden = true, 2500);
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Lỗi ${res.status}`);
+      return data;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    const userTableBody = document.getElementById('userTableBody');
+    const roleTableBody = document.getElementById('roleTableBody');
+    const notebookTableBody = document.getElementById('notebookTableBody');
+    const notebookOwnerSelect = document.getElementById('newNotebookOwner');
+    const passwordModal = document.getElementById('passwordModal');
+    const passwordForm = document.getElementById('passwordForm');
+    const passwordUserInput = document.getElementById('editPasswordUser');
+    const passwordInput = document.getElementById('editPasswordInput');
+    const roleSearchInput = document.getElementById('roleSearchInput');
+    const notebookSearchInput = document.getElementById('notebookSearchInput');
+    const userSearchInput = document.getElementById('userSearchInput');
+    const documentSearchInput = document.getElementById('documentSearchInput');
+    const documentTableBody = document.getElementById('documentTableBody');
+
+    let editingUserId = null;
+    let allUsers = [];
+    let allNotebooks = [];
+    let allDocuments = [];
+    let activeRoleFilter = 'all';
+
+    function updateSidebar(section) {
+      document.querySelectorAll('.sidebar-list li').forEach((item) => {
+        const active = item.dataset.section === section;
+        item.classList.toggle('active', active);
+      });
+      document.querySelectorAll('.admin-section').forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.panel === section);
+      });
+    }
+
+    function openPasswordModal(userId, username) {
+      editingUserId = userId;
+      passwordUserInput.value = username;
+      passwordInput.value = '';
+      passwordModal.hidden = false;
+      setTimeout(() => passwordInput.focus(), 50);
+    }
+
+    function closePasswordModal() {
+      passwordModal.hidden = true;
+      editingUserId = null;
+      passwordInput.value = '';
+    }
+
+    function fillNotebookOwnerSelect(users) {
+      if (!users.length) {
+        notebookOwnerSelect.innerHTML = '<option value="">Không có người dùng</option>';
+        return;
+      }
+      notebookOwnerSelect.innerHTML = users.map((user) => `
+        <option value="${user.id}">${escapeHtml(user.username)} (${user.role})</option>
+      `).join('');
+    }
+
+    function matchesSubstring(value, query) {
+      if (!query) return true;
+      return String(value || '').toLowerCase().includes(query.toLowerCase());
+    }
+
+    function renderRoleRows(users) {
+      const keyword = (roleSearchInput.value || '').trim().toLowerCase();
+      const filtered = users.filter((user) => {
+        const matchesKeyword = matchesSubstring(user.username, keyword) || matchesSubstring(user.role, keyword);
+        const matchesRole = activeRoleFilter === 'all' || user.role === activeRoleFilter;
+        return matchesKeyword && matchesRole;
+      });
+
+      document.getElementById('roleResultCount').textContent = `${filtered.length} kết quả`;
+
+      if (!filtered.length) {
+        roleTableBody.innerHTML = '<tr><td colspan="5" class="muted-area">Không tìm thấy người dùng nào.</td></tr>';
+        return;
+      }
+
+      roleTableBody.innerHTML = filtered.map((user) => `
+        <tr>
+          <td>${escapeHtml(user.username)}</td>
+          <td><span class="role-pill ${user.role === 'admin' ? 'admin' : ''}">${user.role}</span></td>
+          <td>${escapeHtml(user.created_at || '-')}</td>
+          <td>${user.notebook_count ?? 0}</td>
+          <td>
+            <div class="actions">
+              <button type="button" class="btn-ghost small" data-role-user="${user.id}">${user.role === 'admin' ? 'Gỡ admin' : 'Cấp admin'}</button>
+              <button type="button" class="btn-ghost small" data-edit-password="${user.id}" data-username="${escapeHtml(user.username)}">Sửa mật khẩu</button>
+              <button type="button" class="btn-ghost small" data-delete-user="${user.id}">Xóa</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderUserRows(users) {
+      const keyword = (userSearchInput.value || '').trim().toLowerCase();
+      const filtered = users.filter((user) =>
+        matchesSubstring(`${user.username} ${user.email || ''}`, keyword)
+      );
+      if (!filtered.length) {
+        userTableBody.innerHTML = '<tr><td colspan="6" class="muted-area">Không tìm thấy người dùng nào.</td></tr>';
+        return;
+      }
+      userTableBody.innerHTML = filtered.map((user) => `
+        <tr>
+          <td>${escapeHtml(user.username)}</td>
+          <td>${escapeHtml(user.email || 'Chưa liên kết')}</td>
+          <td><span class="role-pill ${user.role === 'admin' ? 'admin' : ''}">${user.role}</span></td>
+          <td>${escapeHtml(user.created_at || '-')}</td>
+          <td>${user.notebook_count ?? 0}</td>
+          <td><div class="actions">
+            <button type="button" class="btn-ghost small" data-role-user="${user.id}">${user.role === 'admin' ? 'Gỡ admin' : 'Cấp admin'}</button>
+            <button type="button" class="btn-ghost small" data-edit-password="${user.id}" data-username="${escapeHtml(user.username)}">Sửa mật khẩu</button>
+            <button type="button" class="btn-ghost small" data-delete-user="${user.id}">Xóa</button>
+          </div></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderDocumentRows(documents) {
+      const keyword = (documentSearchInput.value || '').trim().toLowerCase();
+      const filtered = documents.filter((doc) => matchesSubstring(
+        `${doc.name} ${doc.notebook_name} ${doc.owner_username} ${doc.owner_email}`,
+        keyword
+      ));
+      document.getElementById('documentResultCount').textContent = `${filtered.length} kết quả`;
+      documentTableBody.innerHTML = filtered.length ? filtered.map((doc) => `
+        <tr>
+          <td>${escapeHtml(doc.name)}</td>
+          <td>${escapeHtml(doc.notebook_name)}</td>
+          <td>${escapeHtml(doc.owner_username)}</td>
+          <td>${escapeHtml(doc.owner_email || 'Chưa liên kết')}</td>
+          <td>${escapeHtml(doc.source_type)}</td>
+          <td><button type="button" class="btn-ghost small" data-delete-document="${doc.id}" data-document-notebook="${doc.notebook_id}">Xóa</button></td>
+        </tr>
+      `).join('') : '<tr><td colspan="6" class="muted-area">Không tìm thấy tài liệu nào.</td></tr>';
+    }
+
+    function renderNotebookRows(notebooks) {
+      const keyword = (notebookSearchInput.value || '').trim().toLowerCase();
+      const filtered = notebooks.filter((nb) => {
+        const haystack = `${nb.name || ''} ${nb.owner_username || ''}`;
+        return matchesSubstring(haystack, keyword);
+      });
+
+      document.getElementById('notebookResultCount').textContent = `${filtered.length} kết quả`;
+
+      if (!filtered.length) {
+        notebookTableBody.innerHTML = '<tr><td colspan="5" class="muted-area">Không tìm thấy sổ tay nào.</td></tr>';
+        return;
+      }
+
+      notebookTableBody.innerHTML = filtered.map((nb) => `
+        <tr>
+          <td>${escapeHtml(nb.name || 'Notebook chưa đặt tên')}</td>
+          <td>${escapeHtml(nb.owner_username || 'Không rõ')}</td>
+          <td>${escapeHtml(nb.created_at || '-')}</td>
+          <td>${nb.doc_count ?? 0}</td>
+          <td>
+            <div class="actions">
+              <button type="button" class="btn-ghost small" data-delete-notebook="${nb.id}">Xóa</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadUsers() {
+      try {
+        const users = await api('/api/admin/users');
+        allUsers = users;
+        const totalUsers = users.length;
+        const totalAdmins = users.filter((user) => user.role === 'admin').length;
+        const totalNotebooks = users.reduce((sum, user) => sum + (user.notebook_count ?? 0), 0);
+
+        document.getElementById('totalUsers').textContent = totalUsers;
+        document.getElementById('totalAdmins').textContent = totalAdmins;
+        document.getElementById('totalNotebooks').textContent = totalNotebooks;
+
+        fillNotebookOwnerSelect(users);
+
+        if (!users.length) {
+          userTableBody.innerHTML = '<tr><td colspan="6" class="muted-area">Chưa có tài khoản nào.</td></tr>';
+          roleTableBody.innerHTML = '<tr><td colspan="5" class="muted-area">Chưa có tài khoản nào.</td></tr>';
+          return;
+        }
+
+        renderUserRows(users);
+        renderRoleRows(users);
+      } catch (error) {
+        userTableBody.innerHTML = `<tr><td colspan="6" class="muted-area">${escapeHtml(error.message)}</td></tr>`;
+        roleTableBody.innerHTML = `<tr><td colspan="5" class="muted-area">${escapeHtml(error.message)}</td></tr>`;
+      }
+    }
+
+    async function loadNotebooks() {
+      try {
+        const notebooks = await api('/api/admin/notebooks');
+        allNotebooks = notebooks;
+        const total = notebooks.length;
+        document.getElementById('totalNotebooks').textContent = total;
+
+        if (!notebooks.length) {
+          notebookTableBody.innerHTML = '<tr><td colspan="5" class="muted-area">Chưa có sổ tay nào.</td></tr>';
+          return;
+        }
+
+        renderNotebookRows(notebooks);
+      } catch (error) {
+        notebookTableBody.innerHTML = `<tr><td colspan="5" class="muted-area">${escapeHtml(error.message)}</td></tr>`;
+      }
+    }
+
+    async function loadDocuments() {
+      try {
+        allDocuments = await api('/api/admin/documents');
+        renderDocumentRows(allDocuments);
+      } catch (error) {
+        documentTableBody.innerHTML = `<tr><td colspan="6" class="muted-area">${escapeHtml(error.message)}</td></tr>`;
+      }
+    }
+
+    async function loadApiConfig() {
+      try {
+        const config = await api('/api/config');
+        document.getElementById('adminGoogleModel').value = config.model || '';
+        document.getElementById('adminOpenaiModel').value = config.openai_model || '';
+        document.getElementById('adminOpenrouterModel').value = config.openrouter_model || '';
+        document.getElementById('adminAnthropicModel').value = config.anthropic_model || '';
+        const statuses = [
+          ['googleKeyStatus', config.has_api_key],
+          ['openaiKeyStatus', config.has_openai_key],
+          ['openrouterKeyStatus', config.has_openrouter_key],
+          ['anthropicKeyStatus', config.has_anthropic_key],
+          ['githubKeyStatus', config.has_github_token],
+        ];
+        statuses.forEach(([elementId, configured]) => {
+          document.getElementById(elementId).textContent = configured ? '(Đã cấu hình)' : '(Chưa cấu hình)';
+        });
+        showToast('Đã tải cấu hình API. Key đang lưu được giữ ẩn.');
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    async function loadAdminData() {
+      await Promise.all([loadUsers(), loadNotebooks(), loadDocuments()]);
+    }
+
+    document.querySelectorAll('.sidebar-list li').forEach((item) => {
+      item.addEventListener('click', () => {
+        updateSidebar(item.dataset.section);
+        if (item.dataset.section === 'api-keys') loadApiConfig();
+      });
+    });
+
+    document.getElementById('apiConfigForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const payload = {
+        model: document.getElementById('adminGoogleModel').value.trim(),
+        openai_model: document.getElementById('adminOpenaiModel').value.trim(),
+        openrouter_model: document.getElementById('adminOpenrouterModel').value.trim(),
+        anthropic_model: document.getElementById('adminAnthropicModel').value.trim(),
+      };
+      const keyFields = [
+        ['adminGoogleApiKey', 'api_key'],
+        ['adminOpenaiApiKey', 'openai_api_key'],
+        ['adminOpenrouterApiKey', 'openrouter_api_key'],
+        ['adminAnthropicApiKey', 'anthropic_api_key'],
+        ['adminGithubToken', 'github_token'],
+      ];
+      keyFields.forEach(([elementId, payloadKey]) => {
+        const value = document.getElementById(elementId).value.trim();
+        if (value) payload[payloadKey] = value;
+      });
+      try {
+        await api('/api/config', { method: 'POST', body: JSON.stringify(payload) });
+        keyFields.forEach(([elementId]) => { document.getElementById(elementId).value = ''; });
+        showToast('Đã lưu cấu hình API.');
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    document.getElementById('createUserForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value;
+      const email = document.getElementById('newEmail').value.trim();
+      const role = document.getElementById('newRole').value;
+
+      if (!username || !password) {
+        showToast('Tên đăng nhập và mật khẩu không được để trống.');
+        return;
+      }
+
+      try {
+        const created = await api('/api/admin/users', {
+          method: 'POST',
+          body: JSON.stringify({ username, email, password, role }),
+        });
+        showToast(created.verification_link
+          ? 'Đã tạo Firebase user. Link xác thực đã được tạo, hãy gửi link này cho người dùng.'
+          : 'Đã thêm tài khoản.');
+        if (created.verification_link) {
+          window.prompt('Link xác thực Firebase:', created.verification_link);
+        }
+        document.getElementById('createUserForm').reset();
+        await loadAdminData();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    document.getElementById('createNotebookForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const name = document.getElementById('newNotebookName').value.trim();
+      const userId = notebookOwnerSelect.value || allUsers[0]?.id || null;
+
+      if (!name) {
+        showToast('Tên sổ tay không được để trống.');
+        return;
+      }
+
+      try {
+        await api('/api/admin/notebooks', {
+          method: 'POST',
+          body: JSON.stringify({
+            name,
+            user_id: userId || undefined,
+            userId: userId || undefined,
+          }),
+        });
+        showToast('Đã thêm sổ tay mới.');
+        document.getElementById('createNotebookForm').reset();
+        await loadAdminData();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    document.addEventListener('click', async (event) => {
+      const deleteDocumentBtn = event.target.closest('[data-delete-document]');
+      if (deleteDocumentBtn) {
+        const documentId = deleteDocumentBtn.getAttribute('data-delete-document');
+        const notebookId = deleteDocumentBtn.getAttribute('data-document-notebook');
+        const target = allDocuments.find((doc) => doc.id === documentId && doc.notebook_id === notebookId);
+        if (!target || !window.confirm(`Bạn có chắc muốn xóa tài liệu "${target.name}" không?`)) return;
+        try {
+          await api(`/api/admin/documents/${notebookId}/${documentId}`, { method: 'DELETE' });
+          showToast('Đã xóa tài liệu.');
+          await loadAdminData();
+        } catch (error) {
+          showToast(error.message);
+        }
+        return;
+      }
+
+      const editPasswordBtn = event.target.closest('[data-edit-password]');
+      if (editPasswordBtn) {
+        const userId = editPasswordBtn.getAttribute('data-edit-password');
+        const username = editPasswordBtn.getAttribute('data-username');
+        openPasswordModal(userId, username);
+        return;
+      }
+
+      const toggleRoleBtn = event.target.closest('[data-role-user]');
+      if (toggleRoleBtn) {
+        const userId = toggleRoleBtn.getAttribute('data-role-user');
+        try {
+          const users = await api('/api/admin/users');
+          const target = users.find((u) => u.id === userId);
+          if (!target) throw new Error('Không tìm thấy tài khoản.');
+          const nextRole = target.role === 'admin' ? 'user' : 'admin';
+          const ok = window.confirm(`Bạn có chắc muốn ${nextRole === 'admin' ? 'cấp quyền admin' : 'gỡ quyền admin'} cho tài khoản "${target.username}" không?`);
+          if (!ok) return;
+          await api(`/api/admin/users/${userId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ role: nextRole }),
+          });
+          showToast(`Đã đổi role sang ${nextRole}.`);
+          await loadAdminData();
+        } catch (error) {
+          showToast(error.message);
+        }
+        return;
+      }
+
+      const deleteBtn = event.target.closest('[data-delete-user]');
+      if (!deleteBtn) return;
+      const userId = deleteBtn.getAttribute('data-delete-user');
+      const targetUser = (await api('/api/admin/users')).find((u) => u.id === userId);
+      if (!targetUser) {
+        showToast('Không tìm thấy tài khoản cần xóa.');
+        return;
+      }
+      const ok = window.confirm(`Bạn có chắc muốn xóa tài khoản "${targetUser.username}" không? Hành động này không thể hoàn tác.`);
+      if (!ok) return;
+      try {
+        await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
+        showToast('Đã xóa tài khoản.');
+        await loadAdminData();
+      } catch (error) {
+        showToast(error.message);
+      }
+      return;
+    });
+
+    document.addEventListener('click', async (event) => {
+      const deleteNotebookBtn = event.target.closest('[data-delete-notebook]');
+      if (!deleteNotebookBtn) return;
+      const notebookId = deleteNotebookBtn.getAttribute('data-delete-notebook');
+      const notebooks = await api('/api/admin/notebooks');
+      const target = notebooks.find((nb) => nb.id === notebookId);
+      if (!target) {
+        showToast('Không tìm thấy sổ tay cần xóa.');
+        return;
+      }
+      const ok = window.confirm(`Bạn có chắc muốn xóa sổ tay "${target.name}" không?`);
+      if (!ok) return;
+      try {
+        await api(`/api/admin/notebooks/${notebookId}`, { method: 'DELETE' });
+        showToast('Đã xóa sổ tay.');
+        await loadAdminData();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    passwordForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!editingUserId) return;
+
+      const newPassword = passwordInput.value.trim();
+      if (newPassword.length < 6) {
+        showToast('Mật khẩu mới phải có ít nhất 6 ký tự.');
+        return;
+      }
+
+      try {
+        await api(`/api/admin/users/${editingUserId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ password: newPassword }),
+        });
+        showToast('Đã cập nhật mật khẩu.');
+        closePasswordModal();
+        await loadAdminData();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    roleSearchInput.addEventListener('input', () => renderRoleRows(allUsers));
+    userSearchInput.addEventListener('input', () => renderUserRows(allUsers));
+    notebookSearchInput.addEventListener('input', () => renderNotebookRows(allNotebooks));
+    documentSearchInput.addEventListener('input', () => renderDocumentRows(allDocuments));
+    document.querySelectorAll('.filter-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        activeRoleFilter = chip.dataset.roleFilter;
+        document.querySelectorAll('.filter-chip').forEach((item) => item.classList.toggle('active', item === chip));
+        renderRoleRows(allUsers);
+      });
+    });
+
+    document.getElementById('closePasswordModal').addEventListener('click', closePasswordModal);
+    passwordModal.addEventListener('click', (event) => {
+      if (event.target === passwordModal) closePasswordModal();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/';
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    updateSidebar('users');
+    loadAdminData();
+  </script>
+</body>
+</html>
