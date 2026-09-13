@@ -1154,9 +1154,7 @@ def get_audio(filename):
     return send_from_directory(storage.AUDIO_DIR, filename)
 
 
-if __name__ == "__main__":
-    print("\n📓 NotebookLM-clone đang chạy tại: http://127.0.0.1:5050\n")
-    # threaded=True: bắt buộc để server có thể xử lý đồng thời nhiều request
-    # (ví dụ: vừa quét/OCR tài liệu ở luồng nền, vừa trả lời request kiểm tra
-    # tiến trình /api/uploads/<id>, vừa phục vụ các tab/notebook khác).
-    app.run(host="127.0.0.1", port=5050, debug=True, use_reloader=False, threaded=True)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    print(f"\n NotebookLM-clone đang chạy tại cổng: {port}")
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
