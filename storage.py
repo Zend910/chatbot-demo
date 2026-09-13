@@ -478,3 +478,8 @@ def _load():
         ]
         notebooks[doc.id] = nb
     return {"users": users, "notebooks": notebooks}
+import os
+
+# Thêm khai báo này vào file storage.py
+UPLOAD_DIR = os.path.join(os.getcwd(), 'uploads')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
