@@ -1,8 +1,8 @@
 """Đọc tài liệu (PDF, DOCX, TXT, MD, ảnh) và chia thành các đoạn (chunk) để truy hồi.
 
-Hỗ trợ OCR cho PDF dạng ảnh scan (từng trang được thử trích xuất text trước,
-trang nào không có text mới render thành ảnh rồi OCR) và cho ảnh chụp/scan
-tải lên trực tiếp (PNG/JPG/…)."""
+Hỗ trợ Gemini Vision cho PDF dạng ảnh scan (từng trang được thử trích xuất text
+trước, trang nào không có text mới render thành ảnh rồi nhận diện) và cho ảnh
+chụp/scan tải lên trực tiếp (PNG/JPG/…)."""
 import io
 import os
 import re
@@ -17,54 +17,30 @@ try:
 except ImportError:
     fitz = None
 
-try:
-    import pytesseract
-except ImportError:
-    pytesseract = None
-
-if pytesseract is not None and os.name == "nt":
-    for _tesseract_path in (
-        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-    ):
-        if os.path.exists(_tesseract_path):
-            pytesseract.pytesseract.tesseract_cmd = _tesseract_path
-            break
+import llm_client
 
 CHUNK_SIZE = 900  # ký tự
 CHUNK_OVERLAP = 150
 
-OCR_LANG = "vie+eng"
-OCR_DPI = 200
+OCR_DPI = 150
 MIN_TEXT_LEN_BEFORE_OCR = 25  # ít hơn ngần này ký tự -> coi như trang scan, thử OCR
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
 
 
 class OCRUnavailableError(Exception):
-    """Không có tesseract-ocr trên máy nên không OCR được."""
+    """Gemini Vision chưa sẵn sàng hoặc không đọc được tài liệu."""
 
 
 def _ocr_image(img):
-    if pytesseract is None:
-        raise OCRUnavailableError(
-            "Thiếu thư viện pytesseract. Chạy: pip install pytesseract pymupdf"
-        )
     try:
-        return pytesseract.image_to_string(img, lang=OCR_LANG)
-    except pytesseract.pytesseract.TesseractNotFoundError as e:
+        return llm_client.extract_text_from_image(img)
+    except llm_client.NotConfiguredError as e:
         raise OCRUnavailableError(
-            "Chưa cài chương trình Tesseract OCR trên máy. Xem hướng dẫn cài đặt "
-            "trong README.md (mục OCR)."
+            "Chưa cấu hình Google AI API key để đọc tài liệu bằng Gemini Vision. "
+            "Vào Cài đặt để nhập key."
         ) from e
-    except Exception:
-        # Có thể do thiếu gói ngôn ngữ 'vie' -> thử lại chỉ với tiếng Anh
-        try:
-            return pytesseract.image_to_string(img, lang="eng")
-        except pytesseract.pytesseract.TesseractNotFoundError as e:
-            raise OCRUnavailableError(
-                "Chưa cài chương trình Tesseract OCR trên máy. Xem hướng dẫn cài đặt "
-                "trong README.md (mục OCR)."
-            ) from e
+    except Exception as e:
+        raise OCRUnavailableError(f"Gemini Vision không đọc được ảnh tài liệu: {e}") from e
 
 
 def _ocr_pdf_page(fitz_doc, page_index):

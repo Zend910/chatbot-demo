@@ -100,8 +100,9 @@ Vào **Cài đặt** (góc trên bên phải) → dán API key → model mặc �
 1. **Tạo sổ tay mới** ở góc trên.
 2. **Tải lên** tài liệu (PDF, DOCX, TXT, MD, hoặc ảnh PNG/JPG) ở cột "Nguồn" bên
    trái. Với PDF, từng trang được thử trích xuất text trước; trang nào không có
-   text (ảnh scan) sẽ tự động OCR — tài liệu có trang OCR sẽ hiện nhãn **OCR**
-   cạnh tên. Ảnh tải lên trực tiếp luôn được OCR toàn bộ.
+  text (ảnh scan) sẽ tự động đọc bằng **Gemini Vision** — tài liệu có trang OCR
+  sẽ hiện nhãn **OCR** cạnh tên. Ảnh tải lên trực tiếp cũng được Gemini Vision
+  đọc toàn bộ.
 3. **Đặt câu hỏi** ở khung chat giữa — câu trả lời sẽ có số trích dẫn `[1]`,
    `[2]`… kèm danh sách nguồn (tên tài liệu + vị trí + đoạn trích) ngay bên dưới.
 4. Ở cột **Xưởng** bên phải:
@@ -129,8 +130,8 @@ Toàn bộ dữ liệu (tài liệu đã tải, lịch sử chat, audio đã t�
 
 - Truy hồi dùng TF-IDF (từ khóa) thay vì embedding ngữ nghĩa — đủ tốt cho hầu hết
   câu hỏi nhưng kém hơn embedding thật với câu hỏi diễn đạt rất khác từ ngữ gốc.
-- OCR chạy qua Tesseract offline — nhanh và miễn phí, nhưng độ chính xác với chữ
-  viết tay, ảnh mờ/nghiêng, hoặc font lạ sẽ kém hơn các dịch vụ OCR cloud trả phí.
+- OCR ảnh scan chạy qua Gemini Vision, nên cần cấu hình Google AI API key và có
+  thể phát sinh giới hạn lượt gọi theo gói Gemini đang dùng.
 - Giọng đọc audio overview phụ thuộc voice TTS có sẵn trên máy, chưa hỗ trợ giọng
   đọc tiếng Việt chất lượng cao kiểu cloud TTS.
 - Gói Gemini miễn phí có giới hạn số lượt gọi/phút và /ngày. Nếu gặp lỗi kiểu

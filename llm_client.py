@@ -14,6 +14,7 @@ import retrieval
 
 MAX_TOKENS_CHAT = 5000
 MAX_TOKENS_LONG = 6000
+MAX_TOKENS_VISION = 12000
 
 
 def append_custom_instruction(system, custom_instructions=None):
@@ -64,6 +65,27 @@ def _configure(runtime_config=None):
     if model_name in {"Gemini API Key 2", "gemini-2.5-flash"} or not model_name.startswith("gemini-"):
         model_name = "gemini-3.6-flash"
     return model_name
+
+
+def extract_text_from_image(image, runtime_config=None):
+    """Extract document text from a PIL image with Gemini Vision."""
+    model_name = _configure(runtime_config)
+    model = genai.GenerativeModel(model_name)
+    response = model.generate_content(
+        [
+            (
+                "Đọc toàn bộ chữ trong ảnh tài liệu này. Chỉ trả về phần văn bản đã đọc, "
+                "giữ nguyên thứ tự đọc và xuống dòng hợp lý. Không thêm nhận xét, không bọc "
+                "trong Markdown, không mô tả hình ảnh và không đoán phần không nhìn rõ."
+            ),
+            image,
+        ],
+        generation_config=genai.types.GenerationConfig(
+            max_output_tokens=MAX_TOKENS_VISION,
+            temperature=0,
+        ),
+    )
+    return (response.text or "").strip()
 
 
 def _strip_json_fence(text):

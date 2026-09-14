@@ -1171,6 +1171,21 @@ body.app-mode .studio-pane:hover {
   color: #a3acba;
 }
 
+.creator-strip.reveal-up {
+  animation-name: creatorLiftIn;
+}
+
+@keyframes creatorLiftIn {
+  0% {
+    transform: translateX(-50%) translateY(18px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
 .reveal-up {
   transform: translateY(18px);
   opacity: 0;
