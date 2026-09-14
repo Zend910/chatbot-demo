@@ -67,7 +67,13 @@
       </div>
     </div>
     <form class="chat-input" id="chatForm">
-      <input type="text" id="chatInput" data-i18n-placeholder="chatPlaceholder" placeholder="Đặt câu hỏi về tài liệu…" autocomplete="off">
+      <input type="file" id="chatImageInput" accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.bmp,.tiff" hidden multiple>
+      <div class="chat-input-main">
+        <div class="chat-attachments" id="chatAttachments" hidden></div>
+        <textarea id="chatInput" class="chat-input-textarea" rows="1" data-i18n-placeholder="chatPlaceholder" placeholder="Đặt câu hỏi về tài liệu… (dán ảnh bằng Ctrl+V để hỏi riêng về ảnh đó)"></textarea>
+        <button type="button" id="chatExpandBtn" class="chat-expand-btn chat-expand-btn-inline" title="Phóng to khung chat" aria-label="Phóng to khung chat"><i class="fa-solid fa-expand"></i></button>
+      </div>
+      <button type="button" id="chatImageBtn" class="chat-expand-btn" title="Tải lên tệp làm nguồn (PDF, DOCX, TXT, ảnh...)" aria-label="Tải lên tệp"><i class="fa-solid fa-paperclip"></i></button>
       <button type="submit" class="btn-primary">Gửi</button>
     </form>
   </section>
@@ -407,10 +413,6 @@
         <h4 style="margin-top: 16px;">Phản hồi & Hỗ trợ</h4>
         <button type="button" class="btn-secondary" style="width: 100%;"><i class="fa-solid fa-bug"></i> Báo cáo lỗi</button>
         <button type="button" class="btn-secondary" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-lightbulb"></i> Gửi đề xuất</button>
-
-        <h4 style="margin-top: 16px;">Thông tin pháp lý</h4>
-        <button type="button" class="btn-secondary" style="width: 100%;"><i class="fa-solid fa-file-contract"></i> Điều khoản dịch vụ</button>
-        <button type="button" class="btn-secondary" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-lock"></i> Chính sách quyền riêng tư</button>
         <p class="hint" style="margin-top: 12px;"><strong>Phiên bản ứng dụng:</strong> v1.0.0 (2026)</p>
       </div>
     </div>

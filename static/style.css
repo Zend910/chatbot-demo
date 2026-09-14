@@ -466,20 +466,168 @@ button, input, select {
 
 .chat-input {
   display: flex;
+  align-items: flex-end;
   gap: 10px;
   padding: 16px 32px;
   border-top: 1px solid var(--line);
   background: var(--panel);
+  position: relative;
+  transition: all 0.2s ease;
 }
 
-.chat-input input {
+.chat-input-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.chat-input input,
+.chat-input-textarea {
   flex: 1;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 10px 12px;
   background: var(--bg);
 }
-.chat-input input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.chat-input-textarea {
+  width: 100%;
+  resize: none;
+  max-height: 160px;
+  overflow-y: auto;
+  font-family: inherit;
+  line-height: 1.5;
+  color: inherit;
+  padding-right: 44px; /* chừa chỗ cho nút phóng to nằm bên trong khung chat */
+}
+
+/* Nút phóng to đặt NẰM TRONG khung chat (góc trên-phải của ô nhập), tách khỏi
+   hàng nút Đính kèm tệp / Gửi bên ngoài */
+.chat-expand-btn-inline {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+  background: var(--panel);
+  z-index: 2;
+}
+.chat-input.expanded .chat-expand-btn-inline {
+  top: 10px;
+  right: 10px;
+}
+
+.chat-input input:focus,
+.chat-input-textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Đính kèm ảnh dán vào khung chat (Ctrl+V) */
+.chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 4px 8px 4px 4px;
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 220px;
+}
+
+.attachment-chip img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.attachment-chip .attachment-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.attachment-chip .attachment-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.attachment-chip .attachment-status { font-size: 11px; color: var(--accent); }
+.attachment-chip.error .attachment-status { color: var(--danger); }
+.attachment-chip.error { border-color: var(--danger); }
+
+.attachment-chip .attachment-remove {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px;
+  flex-shrink: 0;
+}
+.attachment-chip .attachment-remove:hover { color: var(--danger); }
+
+/* Nút phóng to khung chat khi câu hỏi quá dài */
+.chat-expand-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.chat-expand-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.chat-input.expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  padding: 24px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+  animation: chatInputSlideUp 0.2s ease;
+}
+.chat-input.expanded::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: -1;
+}
+.chat-input.expanded .chat-input-main { height: 100%; }
+.chat-input.expanded .chat-input-textarea {
+  flex: 1;
+  height: 100%;
+  max-height: none;
+  font-size: 16px;
+}
+
+@keyframes chatInputSlideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
 
 /* ---------- Studio pane ---------- */
 
@@ -1867,9 +2015,16 @@ body { font-size: 14px; letter-spacing: 0; }
 .answer-table th { background: #2d3b51; color: #f0f4fc; font-weight: 700; }
 .answer-table td { background: #20242a; }
 .chat-input { padding: 14px 24px 20px; border-top: 0; background: #17191d; }
-.chat-input input { min-height: 52px; padding: 13px 17px; border: 1px solid #454b56; border-radius: 16px; background: #22262c; color: #fff; font-size: 16px; }
-.chat-input input::placeholder { color: #7f8794; }
+.chat-input input,
+.chat-input-textarea { min-height: 52px; padding: 13px 17px; border: 1px solid #454b56; border-radius: 16px; background: #22262c; color: #fff; font-size: 16px; }
+.chat-input input::placeholder,
+.chat-input-textarea::placeholder { color: #7f8794; }
 .chat-input .btn-primary { min-width: 60px; border-radius: 14px; }
+.chat-expand-btn { border-color: #454b56; background: #22262c; color: #dfe3e9; }
+.chat-expand-btn:hover { border-color: #8cc5ff; color: #8cc5ff; }
+.attachment-chip { border-color: #454b56; background: #22262c; color: #aab0bb; }
+.attachment-chip .attachment-name { color: #e6e9ee; }
+.chat-input.expanded { background: #17191d; }
 .tabs { gap: 4px; margin: 0 0 14px; border-bottom-color: #373c46; }
 .tab { padding: 10px 9px; color: #929aa8; font-size: 15px; }
 .tab.active { color: #e8efff; border-bottom-color: #a7c7ff; }

@@ -37,6 +37,17 @@ def append_custom_instruction(system, custom_instructions=None):
     )
 
 
+MATH_FORMAT_INSTRUCTION = (
+    "\n\nKHI GIẢI BÀI TẬP TOÁN (hoặc có phép tính số học/đại số bất kỳ), trình bày từng bước rõ ràng bằng "
+    "ký hiệu quen thuộc, dễ đọc trên điện thoại: dùng đúng dấu × cho phép nhân (không dùng dấu *), dấu ÷ hoặc "
+    "viết phân số dạng a/b cho phép chia, dấu +, -, = như bình thường, dùng √ cho căn bậc hai (ví dụ √16), "
+    "dùng số mũ kiểu x² hoặc x³ khi cần lũy thừa, dùng ≤ ≥ ≠ ≈ π khi cần. "
+    "TUYỆT ĐỐI KHÔNG dùng ký hiệu LaTeX hay Markdown gây khó hiểu (như \\times, \\frac{}{}, \\sqrt{}, "
+    "\\left, \\right, dấu $ bao quanh công thức, dấu *, dấu #, dấu ^{}, dấu _{} thô) — chỉ dùng chữ, số và "
+    "ký hiệu toán học thông thường ở trên, trình bày mỗi bước tính trên một dòng để học sinh dễ theo dõi."
+)
+
+
 class NotConfiguredError(Exception):
     pass
 
@@ -231,8 +242,9 @@ def answer_question(retrieved_chunks, question, chat_history, custom_instruction
         "không được chỉ nói 'không tìm thấy'. Nếu câu hỏi mơ hồ, hãy nêu cách hiểu hợp lý rồi trả lời phần có thể. "
         "Khi dùng thông tin từ nguồn, chèn số [1], [2]... ngay sau ý tương ứng. "
         "Các số này phải khớp với nhãn Nguồn bên dưới. Viết bằng tiếng Việt; dùng gạch đầu dòng cho danh sách, "
-        "dùng bảng Markdown chỉ khi cần so sánh nhiều mục, không lạm dụng tiêu đề hay bảng.\n\n"
-        f"CÁC ĐOẠN NGUỒN:\n{context_block}",
+        "dùng bảng Markdown chỉ khi cần so sánh nhiều mục, không lạm dụng tiêu đề hay bảng."
+        + MATH_FORMAT_INSTRUCTION
+        + f"\n\nCÁC ĐOẠN NGUỒN:\n{context_block}",
         custom_instructions,
     )
 
@@ -244,6 +256,35 @@ def answer_question(retrieved_chunks, question, chat_history, custom_instruction
     citations = [citation_map[m] for m in used_markers if m in citation_map]
 
     return {"answer": answer, "citations": citations}
+
+
+def answer_question_with_image(image_context, question, chat_history, custom_instructions=None, runtime_config=None):
+    """Trả lời câu hỏi khi người dùng DÁN ảnh trực tiếp vào khung chat (Ctrl+V)
+    kèm theo câu hỏi. image_context là văn bản đã nhận diện (OCR) từ (các) ảnh
+    vừa dán — ảnh này chỉ dùng nhất thời cho câu hỏi hiện tại, KHÔNG được lưu
+    thành nguồn/tài liệu trong Sổ tay. Vì vậy câu trả lời phải tập trung vào nội
+    dung ảnh + câu hỏi, không được tìm/trích dẫn các tài liệu khác đã tải lên.
+    Trả về {"answer": str, "citations": []} (không có trích dẫn vì không dùng nguồn).
+    """
+    system = append_custom_instruction(
+        "Bạn là trợ lý AI thân thiện. Người dùng vừa DÁN (các) ảnh trực tiếp vào khung chat, ngay kèm theo "
+        "câu hỏi bên dưới — đây là một câu hỏi riêng, tức thời về (các) ảnh này, không liên quan tới các "
+        "tài liệu/nguồn khác đã có sẵn trong Sổ tay. Nội dung chữ trong (các) ảnh (đã được nhận diện bằng OCR) "
+        "được cung cấp ngay dưới đây. HÃY TẬP TRUNG HOÀN TOÀN trả lời dựa trên nội dung ảnh này và câu hỏi của "
+        "người dùng: nếu ảnh là đề bài/bài tập thì giải chi tiết; nếu là văn bản/hình ảnh thông tin thì tóm tắt, "
+        "giải thích hoặc trả lời đúng theo yêu cầu. TUYỆT ĐỐI KHÔNG chèn số trích dẫn kiểu [1], [2], không nhắc "
+        "tới hay dựa vào các tài liệu khác đã tải lên Sổ tay — chỉ dùng nội dung ảnh vừa dán. Trả lời tự nhiên, "
+        "đầy đủ, rõ ràng, viết bằng tiếng Việt."
+        + MATH_FORMAT_INSTRUCTION
+        + f"\n\nNỘI DUNG NHẬN DIỆN ĐƯỢC TỪ (CÁC) ẢNH VỪA DÁN:\n{image_context}",
+        custom_instructions,
+    )
+
+    answer = _generate_with_fallback(
+        system, question, MAX_TOKENS_CHAT, chat_history=chat_history, runtime_config=runtime_config
+    )
+
+    return {"answer": answer, "citations": []}
 
 
 def summarize_documents(documents, custom_instructions=None, runtime_config=None):
@@ -301,6 +342,7 @@ def generate_quiz(documents, n_questions=6, difficulty="medium", topic="", custo
         + "CHỈ trả về JSON hợp lệ, không thêm chữ nào khác, theo đúng cấu trúc:\n"
         + '{"questions": [{"question": "...", "options": ["A","B","C","D"], '
         + '"correct_index": 0, "explanation": "..."}]}'
+        + MATH_FORMAT_INSTRUCTION
         , custom_instructions
     )
 
@@ -354,7 +396,8 @@ def generate_flashcards(documents, n_cards=10, topic="", custom_instructions=Non
         "Trả về JSON hợp lệ, không Markdown, theo cấu trúc: "
         '{"cards":[{"front":"câu hỏi hoặc khái niệm",'
         '"back":"câu trả lời rõ ràng, có thể kèm ví dụ", "hint":"gợi ý ngắn"}]}. '
-        "Mỗi mặt trước chỉ hỏi một ý; mặt sau dài 1-4 câu, chính xác và dễ học.",
+        "Mỗi mặt trước chỉ hỏi một ý; mặt sau dài 1-4 câu, chính xác và dễ học."
+        + MATH_FORMAT_INSTRUCTION,
         custom_instructions,
     )
     raw = _generate_with_fallback(system, combined, max(MAX_TOKENS_LONG, n_cards * 350), json_mode=True, runtime_config=runtime_config)

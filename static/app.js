@@ -5,6 +5,7 @@
     currentNotebook: null,
     user: null,
     customInstructions: "",
+    pendingChatAttachments: [], // ảnh dán vào khung chat (Ctrl+V) — nhất thời, chỉ để gửi kèm câu hỏi, KHÔNG lưu làm nguồn
   };
 
   // Hướng dẫn tùy chỉnh (Cá nhân hóa) — lưu THEO TỪNG TÀI KHOẢN ở server (không dùng
@@ -23,6 +24,8 @@
   const chatLog = $("#chatLog");
   const chatForm = $("#chatForm");
   const chatInput = $("#chatInput");
+  const chatExpandBtn = $("#chatExpandBtn");
+  const chatAttachments = $("#chatAttachments");
   const toastEl = $("#toast");
   const quotaNotice = $("#quotaNotice");
   const quotaNoticeText = $("#quotaNoticeText");
@@ -1051,19 +1054,21 @@
     });
   }
 
-  $("#fileInput").addEventListener("change", async (e) => {
-    const files = Array.from(e.target.files || []);
+  // Tải lên (các) file làm NGUỒN thật sự trong Sổ tay (lưu lại, OCR nếu cần, dùng
+  // cho mọi câu hỏi sau này) — dùng chung cho nút "Tải lên" ở sidebar Nguồn VÀ
+  // nút đính kèm tệp kế khung chat (📎).
+  async function uploadFilesAsSources(files) {
     const nbId = state.currentId;
     let uploadedCount = 0;
     const errors = [];
 
-    if (files.length) {
-      toast(
-        files.length === 1
-          ? `Đang tải lên "${files[0].name}"… Bạn có thể refresh trang hoặc đăng xuất mà không làm gián đoạn quá trình xử lý.`
-          : `Đang tải lên ${files.length} file… Bạn có thể refresh trang hoặc đăng xuất mà không làm gián đoạn quá trình xử lý.`
-      );
-    }
+    if (!files.length) return;
+
+    toast(
+      files.length === 1
+        ? `Đang tải lên "${files[0].name}"… Bạn có thể refresh trang hoặc đăng xuất mà không làm gián đoạn quá trình xử lý.`
+        : `Đang tải lên ${files.length} file… Bạn có thể refresh trang hoặc đăng xuất mà không làm gián đoạn quá trình xử lý.`
+    );
 
     for (const file of files) {
       const fd = new FormData();
@@ -1103,8 +1108,6 @@
       }
     } catch (err) {
       errors.push(`Không tải lại được danh sách tài liệu: ${err.message}`);
-    } finally {
-      e.target.value = "";
     }
 
     if (errors.length) {
@@ -1116,6 +1119,12 @@
     } else if (uploadedCount) {
       toast(`Đã tải lên ${uploadedCount} file.`);
     }
+  }
+
+  $("#fileInput").addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    await uploadFilesAsSources(files);
   });
 
   // ---------- Chat ----------
@@ -1126,14 +1135,57 @@
     }[c]));
   }
 
-  function renderAnswerText(text) {
-    const cleaned = text
+  // ---------- Chuẩn hoá ký hiệu toán học & bỏ ký tự đặc biệt khó hiểu ----------
+  // Model đôi khi vẫn lỡ trả về cú pháp LaTeX (\times, \frac{}{}, $...$...) dù đã
+  // được nhắc không dùng. Các hàm dưới đây chuyển chúng thành ký hiệu toán học
+  // thông thường, dễ đọc, đồng thời giữ lại dấu * khi nó là PHÉP NHÂN (vd "3 * 4")
+  // thay vì xoá trắng như trước (khiến phép tính bị mất luôn dấu nhân).
+  const SUPERSCRIPT_MAP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻" };
+  const SUBSCRIPT_MAP = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
+  const toSuperscriptDigits = (str) => String(str).split("").map((c) => SUPERSCRIPT_MAP[c] || c).join("");
+  const toSubscriptDigits = (str) => String(str).split("").map((c) => SUBSCRIPT_MAP[c] || c).join("");
+
+  function latexToPlainMath(value) {
+    return String(value || "")
+      .replace(/\\times|\\cdot/g, "×")
+      .replace(/\\div/g, "÷")
+      .replace(/\\pm/g, "±")
+      .replace(/\\leq|\\le\b/g, "≤")
+      .replace(/\\geq|\\ge\b/g, "≥")
+      .replace(/\\neq|\\ne\b/g, "≠")
+      .replace(/\\approx/g, "≈")
+      .replace(/\\infty/g, "∞")
+      .replace(/\\pi/g, "π")
+      .replace(/\\sqrt\{([^{}]*)\}/g, "√($1)")
+      .replace(/\\sqrt/g, "√")
+      .replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, "($1/$2)")
+      .replace(/\\left|\\right/g, "")
+      .replace(/\\\[|\\\]|\\\(|\\\)/g, "")
+      .replace(/\${1,2}/g, "")
+      .replace(/\^\{(-?\d+)\}/g, (_, d) => toSuperscriptDigits(d))
+      .replace(/\^(-?\d)\b/g, (_, d) => toSuperscriptDigits(d))
+      .replace(/_\{(\d+)\}/g, (_, d) => toSubscriptDigits(d))
+      .replace(/_(\d)\b/g, (_, d) => toSubscriptDigits(d));
+  }
+
+  function cleanMathAndSymbols(raw) {
+    let text = latexToPlainMath(raw)
       .replace(/```[a-z]*\s*/gi, "")
-      .replace(/```/g, "")
-      .replace(/\*{1,3}/g, "")
+      .replace(/```/g, "");
+    // "**bold**" / "***bold***" -> bỏ dấu *, giữ chữ (không phải phép nhân)
+    text = text.replace(/\*\*\*([^*]+)\*\*\*/g, "$1").replace(/\*\*([^*]+)\*\*/g, "$1");
+    // Dấu * còn lại đứng giữa hai số là phép nhân -> đổi thành ×, KHÔNG xoá
+    text = text.replace(/(\d)\s*\*\s*(\d)/g, "$1 × $2");
+    // Dấu * lẻ còn sót (định dạng in nghiêng cũ) thì bỏ cho gọn, dễ đọc
+    text = text.replace(/\*/g, "");
+    return text
       .replace(/[\@&]/g, "")
       .replace(/[ \t]{2,}/g, " ")
       .trim();
+  }
+
+  function renderAnswerText(text) {
+    const cleaned = cleanMathAndSymbols(text);
     const formatInline = (value) => escapeHtml(value).replace(
       /\[(\d+)\]/g,
       '<span class="cite-marker">$1</span>'
@@ -1190,7 +1242,8 @@
   }
 
   function normalizeClipboardText(value) {
-    return String(value || "")
+    return latexToPlainMath(String(value || ""))
+      .replace(/(\d)\s*\*\s*(\d)/g, "$1×$2")
       .replace(/\u200B/g, "")
       .replace(/\u00A0/g, " ")
       .replace(/\r\n/g, "\n")
@@ -1202,7 +1255,10 @@
   }
 
   function markdownInlineToHtml(value) {
-    return escapeHtml(value)
+    // Bảo vệ dấu * khi là phép nhân (vd "3 * 4") trước khi coi các dấu * còn lại
+    // là cú pháp in đậm/in nghiêng của Markdown.
+    const protectedText = latexToPlainMath(String(value || "")).replace(/(\d)\s*\*\s*(\d)/g, "$1×$2");
+    return escapeHtml(protectedText)
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.+?)\*/g, "<em>$1</em>")
       .replace(/_(.+?)_/g, "<em>$1</em>")
@@ -1320,22 +1376,199 @@
     history.forEach((turn) => appendMessage(turn.role, turn.content, turn.citations));
   }
 
+  // ---------- Khung chat: tự giãn dòng, phóng to (nằm trong khung chat), đính kèm
+  // tệp làm nguồn, và dán ảnh nhất thời (Ctrl+V) chỉ dùng riêng cho câu hỏi đó ----------
+
+  const chatImageBtn = $("#chatImageBtn");
+  const chatImageInput = $("#chatImageInput");
+  let chatInputExpanded = false;
+
+  function autosizeChatInput() {
+    chatInput.style.height = "auto";
+    const nextHeight = Math.min(chatInput.scrollHeight, chatInputExpanded ? Infinity : 160);
+    chatInput.style.height = `${nextHeight}px`;
+  }
+
+  function setChatInputExpanded(expanded) {
+    chatInputExpanded = expanded;
+    chatForm.classList.toggle("expanded", expanded);
+    chatExpandBtn.innerHTML = expanded
+      ? '<i class="fa-solid fa-compress"></i>'
+      : '<i class="fa-solid fa-expand"></i>';
+    chatExpandBtn.title = expanded ? "Thu nhỏ khung chat" : "Phóng to khung chat";
+    chatExpandBtn.setAttribute("aria-label", chatExpandBtn.title);
+    autosizeChatInput();
+    chatInput.focus();
+  }
+
+  chatInput.addEventListener("input", autosizeChatInput);
+
+  chatExpandBtn.addEventListener("click", () => setChatInputExpanded(!chatInputExpanded));
+
+  // Nút 📎 kế khung chat: đính kèm TỆP làm NGUỒN thật sự cho Sổ tay (PDF, DOCX,
+  // TXT, MD, ảnh...) — giống hệt nút "Tải lên" ở sidebar Nguồn, tài liệu sẽ được
+  // lưu lại và dùng cho mọi câu hỏi về sau. Khác với việc DÁN ảnh (Ctrl+V) bên
+  // dưới, vốn chỉ nhất thời cho một câu hỏi và không lưu vào Nguồn.
+  chatImageBtn.addEventListener("click", () => chatImageInput.click());
+  chatImageInput.addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    await uploadFilesAsSources(files);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && chatInputExpanded) setChatInputExpanded(false);
+  });
+
+  // Enter để gửi, Shift+Enter để xuống dòng (vì khung chat giờ là textarea nhiều dòng)
+  chatInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      chatForm.requestSubmit ? chatForm.requestSubmit() : chatForm.dispatchEvent(new Event("submit", { cancelable: true }));
+    }
+  });
+
+  function renderChatAttachments() {
+    const items = state.pendingChatAttachments;
+    chatAttachments.hidden = items.length === 0;
+    chatAttachments.innerHTML = items
+      .map((att) => {
+        const statusText = att.status === "uploading"
+          ? "Đang đọc ảnh…"
+          : att.status === "error"
+          ? (att.error || "Lỗi đọc ảnh")
+          : "Sẵn sàng · chỉ dùng cho câu hỏi này, không lưu vào Nguồn";
+        return `
+          <div class="attachment-chip${att.status === "error" ? " error" : ""}" data-att-id="${att.id}">
+            <img src="${att.previewUrl}" alt="${escapeHtml(att.filename)}">
+            <div class="attachment-info">
+              <span class="attachment-name">${escapeHtml(att.filename)}</span>
+              <span class="attachment-status">${escapeHtml(statusText)}</span>
+            </div>
+            <button type="button" class="attachment-remove" data-remove-att="${att.id}" title="Bỏ ảnh này" aria-label="Bỏ ảnh này"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  chatAttachments.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-remove-att]");
+    if (!btn) return;
+    const id = btn.getAttribute("data-remove-att");
+    const att = state.pendingChatAttachments.find((a) => a.id === id);
+    if (att?.previewUrl) URL.revokeObjectURL(att.previewUrl);
+    // Ảnh dán chỉ tồn tại nhất thời trong bộ nhớ trình duyệt — không có tài liệu
+    // nào được lưu ở server nên bỏ ảnh ở đây là xong, không cần gọi API xóa.
+    state.pendingChatAttachments = state.pendingChatAttachments.filter((a) => a.id !== id);
+    renderChatAttachments();
+  });
+
+  // Dán ảnh (Ctrl+V) vào khung chat: chỉ đọc chữ trong ảnh (OCR) NHẤT THỜI ở bộ
+  // nhớ trình duyệt để gửi kèm câu hỏi hiện tại — KHÔNG upload/lưu ảnh thành
+  // tài liệu/nguồn trong Sổ tay. Khi người dùng gửi câu hỏi, AI sẽ tập trung trả
+  // lời dựa trên nội dung ảnh này + câu hỏi, thay vì đọc từ các nguồn đã tải lên.
+  async function uploadPastedImage(file) {
+    const id = crypto.randomUUID();
+    const attachment = {
+      id,
+      filename: file.name || `anh-dan-${Date.now()}.png`,
+      previewUrl: URL.createObjectURL(file),
+      status: "uploading",
+      ocrText: null,
+      error: null,
+    };
+    state.pendingChatAttachments.push(attachment);
+    renderChatAttachments();
+
+    const nbId = state.currentId;
+    if (!nbId) {
+      attachment.status = "error";
+      attachment.error = "Hãy chọn một sổ tay trước.";
+      renderChatAttachments();
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("file", file, attachment.filename);
+
+    try {
+      // Endpoint riêng, ephemeral: server OCR xong là xóa file tạm ngay, không
+      // tạo tài liệu/nguồn nào trong Sổ tay cả.
+      const res = await fetch(`/api/notebooks/${nbId}/chat/image-context`, {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Lỗi đọc ảnh");
+      attachment.ocrText = data.text;
+      attachment.status = "done";
+    } catch (err) {
+      attachment.status = "error";
+      attachment.error = err.message;
+    }
+    renderChatAttachments();
+  }
+
+  // Ctrl+V: dán ảnh trực tiếp vào khung chat (ảnh sẽ đi cùng câu hỏi hiện tại),
+  // hoặc dán văn bản như bình thường vào ô nhập.
+  chatInput.addEventListener("paste", (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItem = items.find((item) => item.kind === "file" && item.type.startsWith("image/"));
+    if (!imageItem) return; // dán văn bản: để trình duyệt xử lý mặc định
+    const file = imageItem.getAsFile();
+    if (!file) return;
+    e.preventDefault();
+    uploadPastedImage(file);
+  });
+
+  function hasBusyAttachments() {
+    return state.pendingChatAttachments.some((a) => a.status === "uploading");
+  }
+
   chatForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const question = chatInput.value.trim();
-    if (!question || !state.currentId) return;
+    const attachmentCount = state.pendingChatAttachments.length;
+    if ((!question && !attachmentCount) || !state.currentId) return;
+
+    if (hasBusyAttachments()) {
+      toast("Đang đọc ảnh vừa dán, vui lòng đợi trong giây lát rồi gửi lại…");
+      return;
+    }
+    const failedAttachments = state.pendingChatAttachments.filter((a) => a.status === "error");
+    if (failedAttachments.length) {
+      toast(`Có ${failedAttachments.length} ảnh xử lý lỗi. Hãy bỏ ảnh đó hoặc thử dán lại trước khi gửi.`);
+      return;
+    }
+    if (!question) return; // chỉ có ảnh, chưa có câu hỏi kèm theo
+
+    // Gộp nội dung (đã OCR) của các ảnh vừa dán để gửi kèm câu hỏi — ảnh chỉ
+    // nhất thời cho câu hỏi này, không phải nguồn đã lưu trong Sổ tay.
+    const imageContext = state.pendingChatAttachments
+      .filter((a) => a.status === "done" && a.ocrText)
+      .map((a) => a.ocrText)
+      .join("\n\n---\n\n");
+
     appendMessage("user", question, null);
     chatInput.value = "";
+    state.pendingChatAttachments.forEach((a) => {
+      if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+    });
+    state.pendingChatAttachments = [];
+    renderChatAttachments();
+    autosizeChatInput();
+    if (chatInputExpanded) setChatInputExpanded(false);
     const thinking = document.createElement("div");
     thinking.className = "msg msg-assistant";
-    thinking.innerHTML = `<div class="msg-role">Trợ lý</div><div class="msg-bubble">Đang đọc tài liệu…</div>`;
+    thinking.innerHTML = `<div class="msg-role">Trợ lý</div><div class="msg-bubble">${imageContext ? "Đang xem ảnh…" : "Đang đọc tài liệu…"}</div>`;
     chatLog.appendChild(thinking);
     chatLog.scrollTop = chatLog.scrollHeight;
 
     try {
       const result = await api(`/api/notebooks/${state.currentId}/chat`, {
         method: "POST",
-        body: JSON.stringify({ question, custom_instructions: getCustomInstructions() }),
+        body: JSON.stringify({ question, custom_instructions: getCustomInstructions(), image_context: imageContext }),
       });
       thinking.remove();
       appendMessage("assistant", result.answer, result.citations);

@@ -922,6 +922,52 @@ def upload_document(nb_id):
     return jsonify({"upload_id": upload_id, "doc_id": doc_id, "status": "processing"}), 202
 
 
+@app.route("/api/notebooks/<nb_id>/chat/image-context", methods=["POST"])
+@login_required
+def chat_image_context(nb_id):
+    """Nhận diện chữ (OCR) từ một ảnh vừa được DÁN trực tiếp vào khung chat
+    (Ctrl+V), để đính kèm cùng câu hỏi. KHÁC với /documents: ảnh này KHÔNG
+    được lưu thành tài liệu/nguồn trong Sổ tay — chỉ xử lý xong là xoá file
+    tạm ngay, chỉ trả về văn bản OCR để frontend giữ tạm trong bộ nhớ và gửi
+    kèm câu hỏi khi người dùng bấm Gửi."""
+    current = current_user()
+    try:
+        storage.get_notebook(nb_id, user_id=current["id"], role=current.get("role"))
+    except (KeyError, PermissionError) as e:
+        return error_response(e, 404 if isinstance(e, KeyError) else 403)
+
+    if "file" not in request.files:
+        return error_response("Thiếu ảnh.")
+    file = request.files["file"]
+    if not file.filename:
+        return error_response("Tên tệp không hợp lệ.")
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ingest.IMAGE_EXTS:
+        return error_response("Chỉ hỗ trợ dán ảnh (PNG/JPG/WEBP/BMP/TIFF) vào khung chat.")
+
+    tmp_name = f"paste_{uuid.uuid4().hex[:10]}{ext}"
+    tmp_path = os.path.join(storage.UPLOAD_DIR, tmp_name)
+    file.save(tmp_path)
+    try:
+        pages = ingest.extract_pages(tmp_path, ext, use_ocr=True)
+        text = "\n\n".join(p[0] for p in pages).strip()
+        if not text:
+            return error_response("Không nhận diện được chữ nào trong ảnh này (OCR trống).")
+        return jsonify({"ok": True, "text": text})
+    except ingest.OCRUnavailableError as e:
+        return error_response(str(e), 400)
+    except ValueError as e:
+        return error_response(str(e), 400)
+    except Exception as e:
+        return error_response(f"Lỗi xử lý ảnh: {e}", 500)
+    finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+
+
 @app.route("/api/notebooks/<nb_id>/documents/<doc_id>", methods=["DELETE"])
 @login_required
 def delete_document(nb_id, doc_id):
@@ -981,6 +1027,9 @@ def delete_studio_item(nb_id, item_id):
 def chat(nb_id):
     data = request.get_json(force=True)
     question = (data.get("question") or "").strip()
+    # image_context: văn bản OCR của (các) ảnh vừa DÁN trực tiếp vào khung chat (ephemeral,
+    # không phải tài liệu đã tải lên) — khi có, AI chỉ tập trung trả lời dựa trên ảnh này.
+    image_context = (data.get("image_context") or "").strip()
     custom_instructions = storage.get_custom_instructions(current_user()["id"])  # theo từng tài khoản, không lấy từ client
     if not question:
         return error_response("Câu hỏi trống.")
@@ -991,22 +1040,32 @@ def chat(nb_id):
         return error_response(e, 404 if isinstance(e, KeyError) else 403)
 
     current = current_user()
-    chunks = storage.all_chunks(
-        nb_id,
-        user_id=current["id"],
-        role=current.get("role"),
-    )
-
-    relevant = retrieval.top_chunks(chunks, question, k=10) if chunks else []
 
     try:
-        result = llm_client.answer_question(
-            relevant,
-            question,
-            nb["chat_history"],
-            custom_instructions=custom_instructions,
-            runtime_config=runtime_ai_config(),
-        )
+        if image_context:
+            # Có ảnh vừa dán kèm câu hỏi: bỏ qua tìm kiếm trong nguồn tài liệu đã tải lên,
+            # chỉ trả lời dựa trên nội dung ảnh + câu hỏi.
+            result = llm_client.answer_question_with_image(
+                image_context,
+                question,
+                nb["chat_history"],
+                custom_instructions=custom_instructions,
+                runtime_config=runtime_ai_config(),
+            )
+        else:
+            chunks = storage.all_chunks(
+                nb_id,
+                user_id=current["id"],
+                role=current.get("role"),
+            )
+            relevant = retrieval.top_chunks(chunks, question, k=10) if chunks else []
+            result = llm_client.answer_question(
+                relevant,
+                question,
+                nb["chat_history"],
+                custom_instructions=custom_instructions,
+                runtime_config=runtime_ai_config(),
+            )
     except llm_client.NotConfiguredError as e:
         return error_response(e, 400)
     except Exception as e:
