@@ -11,6 +11,7 @@ Cấu trúc Firestore:
   notebooks/{notebook_id}/documents/{document_id}
   notebooks/{notebook_id}/chat_history/{seq}
   notebooks/{notebook_id}/studio_items/{item_id}
+    feedback/{feedback_id}
 
 Toàn bộ tên hàm và tham số giữ nguyên như bản cũ để app.py không cần sửa gì
 thêm ngoài việc xóa/đổi tên file storage.py cũ.
@@ -31,6 +32,62 @@ def _db():
 
 def _now():
     return datetime.now().isoformat(timespec="seconds")
+
+
+# ---------------------------------------------------------------------------
+# User feedback
+# ---------------------------------------------------------------------------
+
+def create_feedback(name, email, feedback_type, subject, message, image_data=None, user_id=None):
+    name = (name or "").strip()
+    email = (email or "").strip().lower()
+    feedback_type = (feedback_type or "bug").strip().lower()
+    subject = (subject or "").strip()
+    message = (message or "").strip()
+    if not name:
+        raise ValueError("Vui lòng nhập họ tên.")
+    if not email or "@" not in email:
+        raise ValueError("Vui lòng nhập email hợp lệ.")
+    if feedback_type not in {"bug", "suggestion"}:
+        raise ValueError("Loại phản hồi không hợp lệ.")
+    if not message:
+        raise ValueError("Vui lòng nhập nội dung phản hồi.")
+
+    feedback_id = uuid.uuid4().hex[:12]
+    feedback = {
+        "id": feedback_id,
+        "name": name,
+        "email": email,
+        "type": feedback_type,
+        "subject": subject,
+        "message": message,
+        "image_data": image_data or "",
+        "status": "new",
+        "user_id": user_id or "",
+        "created_at": _now(),
+    }
+    _db().collection("feedback").document(feedback_id).set(feedback)
+    return feedback
+
+
+def list_feedback():
+    result = []
+    for doc in _db().collection("feedback").stream():
+        item = doc.to_dict()
+        item["id"] = doc.id
+        result.append(item)
+    return sorted(result, key=lambda item: item.get("created_at", ""), reverse=True)
+
+
+def update_feedback_status(feedback_id, status):
+    status = (status or "new").strip().lower()
+    if status not in {"new", "in_progress", "resolved"}:
+        raise ValueError("Trạng thái phản hồi không hợp lệ.")
+    ref = _db().collection("feedback").document(feedback_id)
+    if not ref.get().exists:
+        raise KeyError("Không tìm thấy phản hồi.")
+    ref.update({"status": status})
+    return {"id": feedback_id, "status": status}
 
 
 # ---------------------------------------------------------------------------

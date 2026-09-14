@@ -407,12 +407,48 @@
       <!-- Tab: Trợ giúp -->
       <div class="settings-panel" id="panel-help">
         <h4>Trung tâm trợ giúp</h4>
-        <button type="button" class="btn-secondary" style="width: 100%;"><i class="fa-solid fa-book-open"></i> Hướng dẫn sử dụng</button>
-        <button type="button" class="btn-secondary" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-circle-question"></i> FAQ</button>
+        <details class="help-section" open>
+          <summary><i class="fa-solid fa-book-open"></i> Hướng dẫn sử dụng</summary>
+          <ol class="help-list">
+            <li>Tạo một notebook, sau đó tải PDF, DOCX, TXT, MD hoặc ảnh vào mục Nguồn.</li>
+            <li>Chọn nguồn và đặt câu hỏi ở khung chat. Câu trả lời sẽ trích dẫn tài liệu liên quan.</li>
+            <li>Dùng Studio để tạo tóm tắt, quiz, mind map, flashcard hoặc audio.</li>
+            <li>Có thể dán ảnh trực tiếp vào khung chat để hỏi riêng về ảnh đó.</li>
+          </ol>
+        </details>
+        <details class="help-section">
+          <summary><i class="fa-solid fa-circle-question"></i> FAQ</summary>
+          <div class="faq-list">
+            <p><strong>ChatBotAI đọc được những file nào?</strong><br>PDF, DOCX, TXT, MD và các ảnh PNG, JPG, WEBP, BMP, TIFF.</p>
+            <p><strong>Vì sao câu trả lời có số [1], [2]?</strong><br>Đó là trích dẫn giúp bạn tìm lại đúng tài liệu và vị trí được sử dụng.</p>
+            <p><strong>Ảnh scan có được nhận diện chữ không?</strong><br>Có. Hệ thống dùng Gemini Vision để đọc chữ trong ảnh và trang PDF scan.</p>
+            <p><strong>Tôi có thể xóa tài liệu không?</strong><br>Có, hãy mở danh sách Nguồn và chọn nút xóa bên cạnh tài liệu.</p>
+          </div>
+        </details>
 
         <h4 style="margin-top: 16px;">Phản hồi & Hỗ trợ</h4>
-        <button type="button" class="btn-secondary" style="width: 100%;"><i class="fa-solid fa-bug"></i> Báo cáo lỗi</button>
-        <button type="button" class="btn-secondary" style="width: 100%; margin-top: 8px;"><i class="fa-solid fa-lightbulb"></i> Gửi đề xuất</button>
+        <div class="feedback-type-row">
+          <button type="button" class="btn-secondary feedback-type-btn" data-feedback-type="bug"><i class="fa-solid fa-bug"></i> Báo cáo lỗi</button>
+          <button type="button" class="btn-secondary feedback-type-btn" data-feedback-type="suggestion"><i class="fa-solid fa-lightbulb"></i> Gửi đề xuất</button>
+        </div>
+        <form id="feedbackForm" class="feedback-form" hidden>
+          <h5 id="feedbackFormTitle">Báo cáo lỗi</h5>
+          <input type="hidden" id="feedbackType" value="bug">
+          <label class="field-label" for="feedbackName">Họ và tên *</label>
+          <input id="feedbackName" type="text" required placeholder="Nhập họ tên để chúng tôi liên hệ">
+          <label class="field-label" for="feedbackEmail">Email liên hệ *</label>
+          <input id="feedbackEmail" type="email" required placeholder="you@example.com">
+          <label class="field-label" for="feedbackSubject">Tiêu đề</label>
+          <input id="feedbackSubject" type="text" placeholder="Tóm tắt ngắn gọn">
+          <label class="field-label" for="feedbackMessage">Nội dung *</label>
+          <textarea id="feedbackMessage" required rows="5" placeholder="Mô tả vấn đề hoặc đề xuất của bạn"></textarea>
+          <label class="field-label" for="feedbackImage" id="feedbackImageLabel">Ảnh minh họa (tùy chọn, tối đa 700 KB)</label>
+          <input id="feedbackImage" type="file" accept="image/*">
+          <div class="feedback-form-actions">
+            <button type="button" class="btn-ghost" id="cancelFeedbackBtn">Hủy</button>
+            <button type="submit" class="btn-primary" id="submitFeedbackBtn">Gửi phản hồi</button>
+          </div>
+        </form>
         <p class="hint" style="margin-top: 12px;"><strong>Phiên bản ứng dụng:</strong> v1.0.0 (2026)</p>
       </div>
     </div>

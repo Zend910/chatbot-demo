@@ -551,6 +551,55 @@
     });
   });
 
+  const feedbackForm = $("#feedbackForm");
+  const feedbackTypeInput = $("#feedbackType");
+  const feedbackFormTitle = $("#feedbackFormTitle");
+  const feedbackImage = $("#feedbackImage");
+  document.querySelectorAll(".feedback-type-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const type = button.dataset.feedbackType || "bug";
+      feedbackTypeInput.value = type;
+      feedbackFormTitle.textContent = type === "bug" ? "Báo cáo lỗi" : "Gửi đề xuất";
+      feedbackForm.hidden = false;
+      feedbackImage.required = false;
+      $("#feedbackMessage").placeholder = type === "bug"
+        ? "Mô tả lỗi, các bước tái hiện và kết quả bạn gặp"
+        : "Mô tả ý tưởng hoặc tính năng bạn muốn cải thiện";
+      feedbackForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      $("#feedbackName").focus();
+    });
+  });
+
+  $("#cancelFeedbackBtn")?.addEventListener("click", () => {
+    feedbackForm.reset();
+    feedbackForm.hidden = true;
+  });
+
+  feedbackForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const submitButton = $("#submitFeedbackBtn");
+    const formData = new FormData();
+    formData.append("name", $("#feedbackName").value.trim());
+    formData.append("email", $("#feedbackEmail").value.trim());
+    formData.append("type", feedbackTypeInput.value);
+    formData.append("subject", $("#feedbackSubject").value.trim());
+    formData.append("message", $("#feedbackMessage").value.trim());
+    if (feedbackImage.files[0]) formData.append("image", feedbackImage.files[0]);
+    submitButton.disabled = true;
+    try {
+      const response = await fetch("/api/feedback", { method: "POST", body: formData });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Không gửi được phản hồi.");
+      feedbackForm.reset();
+      feedbackForm.hidden = true;
+      toast("Đã gửi phản hồi. Cảm ơn bạn, chúng tôi sẽ liên hệ qua email.");
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+
   // Admin tab switching
   document.querySelectorAll(".admin-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -604,6 +653,8 @@
       if (enableBetaFeatures) enableBetaFeatures.checked = betaFeatures;
       $("#usernameDisplay").value = state.user?.username || "";
       $("#emailInput").value = state.user?.email || "";
+      if ($("#feedbackName") && !$("#feedbackName").value) $("#feedbackName").value = state.user?.username || "";
+      if ($("#feedbackEmail") && !$("#feedbackEmail").value) $("#feedbackEmail").value = state.user?.email || "";
       const customInstructionsEl = $("#customInstructions");
       if (customInstructionsEl) {
         customInstructionsEl.value = customInstructions;

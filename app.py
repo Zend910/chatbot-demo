@@ -1,5 +1,7 @@
 import os
 import json
+import base64
+import mimetypes
 import time
 import uuid
 import threading
@@ -554,6 +556,56 @@ def set_config():
         "has_anthropic_key": bool(cfg.get("anthropic_api_key")),
         "has_github_token": bool(cfg.get("github_token")),
     })
+
+
+@app.route("/api/feedback", methods=["POST"])
+@login_required
+def submit_feedback():
+    name = (request.form.get("name") or "").strip()
+    email = (request.form.get("email") or "").strip()
+    feedback_type = (request.form.get("type") or "").strip().lower()
+    subject = (request.form.get("subject") or "").strip()
+    message = (request.form.get("message") or "").strip()
+    image_data = ""
+    image = request.files.get("image")
+    if image and image.filename:
+        image_bytes = image.read()
+        if len(image_bytes) > 700 * 1024:
+            return error_response("Ảnh đính kèm không được vượt quá 700 KB.", 400)
+        content_type = image.mimetype or mimetypes.guess_type(image.filename)[0] or ""
+        if not content_type.startswith("image/"):
+            return error_response("Tệp đính kèm phải là hình ảnh.", 400)
+        image_data = f"data:{content_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+    try:
+        feedback = storage.create_feedback(
+            name,
+            email,
+            feedback_type,
+            subject,
+            message,
+            image_data=image_data,
+            user_id=current_user()["id"],
+        )
+        feedback.pop("image_data", None)
+        return jsonify({"ok": True, "feedback": feedback}), 201
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@app.route("/api/admin/feedback", methods=["GET"])
+@admin_required
+def admin_list_feedback():
+    return jsonify(storage.list_feedback())
+
+
+@app.route("/api/admin/feedback/<feedback_id>", methods=["PATCH"])
+@admin_required
+def admin_update_feedback(feedback_id):
+    data = request.get_json(force=True) if request.data else {}
+    try:
+        return jsonify({"ok": True, "feedback": storage.update_feedback_status(feedback_id, data.get("status"))})
+    except (KeyError, ValueError) as e:
+        return error_response(str(e), 400)
 
 
 # ---------- Notebooks ----------
