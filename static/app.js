@@ -1311,7 +1311,7 @@
     return htmlParts.join("");
   }
 
-  function appendMessage(role, content, citations) {
+  function appendMessage(role, content, citations, attachments = []) {
     const wrap = document.createElement("div");
     wrap.className = `msg msg-${role}`;
     wrap.dataset.rawContent = String(content || "");
@@ -1328,9 +1328,18 @@
         .join("")}</div>`;
     }
     const answerHtml = renderAnswerText(content);
+    const attachmentsHtml = attachments.length
+      ? `<div class="message-attachments">${attachments
+          .map(
+            (att) =>
+              `<img src="${escapeHtml(att.imageUrl || att.previewUrl)}" alt="${escapeHtml(att.filename)}" loading="lazy">`
+          )
+          .join("")}</div>`
+      : "";
     wrap.innerHTML = `
       <div class="msg-role">${label}</div>
       <div class="msg-bubble">
+        ${attachmentsHtml}
         <div class="answer-body">${answerHtml}</div>
         ${citeHtml}
       </div>
@@ -1474,6 +1483,7 @@
       id,
       filename: file.name || `anh-dan-${Date.now()}.png`,
       previewUrl: URL.createObjectURL(file),
+      imageUrl: null,
       status: "uploading",
       ocrText: null,
       error: null,
@@ -1493,6 +1503,13 @@
     fd.append("file", file, attachment.filename);
 
     try {
+      attachment.imageUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Không thể đọc ảnh để hiển thị trong tin nhắn."));
+        reader.readAsDataURL(file);
+      });
+      renderChatAttachments();
       // Endpoint riêng, ephemeral: server OCR xong là xóa file tạm ngay, không
       // tạo tài liệu/nguồn nào trong Sổ tay cả.
       const res = await fetch(`/api/notebooks/${nbId}/chat/image-context`, {
@@ -1550,7 +1567,8 @@
       .map((a) => a.ocrText)
       .join("\n\n---\n\n");
 
-    appendMessage("user", question, null);
+    const sentAttachments = state.pendingChatAttachments.map((attachment) => ({ ...attachment }));
+    appendMessage("user", question, null, sentAttachments);
     chatInput.value = "";
     state.pendingChatAttachments.forEach((a) => {
       if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);

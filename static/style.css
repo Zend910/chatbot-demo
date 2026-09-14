@@ -440,6 +440,22 @@ button, input, select {
   color: #c7d2fe;
 }
 
+.message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.message-attachments img {
+  display: block;
+  max-width: min(320px, 100%);
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
 .cite-marker {
   display: inline-block;
   background: var(--gold);
