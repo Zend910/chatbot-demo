@@ -28,7 +28,7 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
 
 
 class OCRUnavailableError(Exception):
-    """Gemini Vision chưa sẵn sàng hoặc không đọc được tài liệu."""
+    """Không có dịch vụ Vision hoặc OCR offline nào đọc được tài liệu."""
 
 
 def _ocr_image(img):
@@ -40,7 +40,7 @@ def _ocr_image(img):
             "Vào Cài đặt để nhập key."
         ) from e
     except Exception as e:
-        raise OCRUnavailableError(f"Gemini Vision không đọc được ảnh tài liệu: {e}") from e
+        raise OCRUnavailableError(f"Gemini/OpenRouter/OCR không đọc được ảnh tài liệu: {e}") from e
 
 
 def _ocr_pdf_page(fitz_doc, page_index):

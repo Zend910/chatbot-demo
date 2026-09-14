@@ -25,6 +25,7 @@ def load_config(overrides=None):
             "openai_model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
             "openrouter_api_key": os.environ.get("OPENROUTER_API_KEY", ""),
             "openrouter_model": os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+            "openrouter_vision_model": os.environ.get("OPENROUTER_VISION_MODEL", "google/gemini-2.0-flash-001"),
             "anthropic_api_key": os.environ.get("ANTHROPIC_API_KEY", ""),
             "anthropic_model": os.environ.get("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"),
             "github_token": os.environ.get("GITHUB_TOKEN", ""),
@@ -38,6 +39,7 @@ def load_config(overrides=None):
         cfg.setdefault("openai_model", os.environ.get("OPENAI_MODEL", "gpt-4o-mini"))
         cfg.setdefault("openrouter_api_key", os.environ.get("OPENROUTER_API_KEY", ""))
         cfg.setdefault("openrouter_model", os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini"))
+        cfg.setdefault("openrouter_vision_model", os.environ.get("OPENROUTER_VISION_MODEL", "google/gemini-2.0-flash-001"))
         cfg.setdefault("anthropic_api_key", os.environ.get("ANTHROPIC_API_KEY", ""))
         cfg.setdefault("anthropic_model", os.environ.get("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"))
         cfg.setdefault("github_token", os.environ.get("GITHUB_TOKEN", ""))

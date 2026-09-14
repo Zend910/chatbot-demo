@@ -28,8 +28,9 @@ dùng 2 giọng khác nhau; nếu chỉ có 1 giọng, ứng dụng sẽ đọc 
 nhau để dễ phân biệt. Chất lượng giọng tiếng Việt qua TTS offline có thể không
 tự nhiên bằng dịch vụ TTS trên mây — đây là đánh đổi để mọi thứ chạy 100% local.
 
-**Lưu ý về OCR (đọc PDF/ảnh scan):** cần cài chương trình **Tesseract OCR** trên
-máy (thư viện `pytesseract` chỉ là lớp gọi tới nó):
+**Lưu ý về OCR (đọc PDF/ảnh scan):** hệ thống ưu tiên Gemini Vision, sau đó
+OpenRouter Vision, và cuối cùng dùng **Tesseract OCR** offline nếu các API hết
+hạn mức hoặc gặp lỗi. Tesseract là lớp dự phòng nên cần cài chương trình này:
 
 - macOS: `brew install tesseract tesseract-lang` (gói `tesseract-lang` có dữ liệu
   tiếng Việt).
@@ -42,6 +43,10 @@ Nếu thiếu gói ngôn ngữ `vie`, ứng dụng sẽ tự động thử lại
 báo lỗi. Nếu hoàn toàn chưa cài Tesseract, app sẽ báo lỗi rõ ràng khi bạn tải
 lên một PDF/ảnh cần OCR (các PDF có sẵn text vẫn hoạt động bình thường, không
 cần Tesseract).
+
+Trên Render, Dockerfile đã tự cài Tesseract cùng dữ liệu tiếng Việt/Anh. Có thể
+đổi model Vision của OpenRouter bằng biến môi trường `OPENROUTER_VISION_MODEL`
+(mặc định `google/gemini-2.0-flash-001`).
 
 ## 2. Lấy Google AI API key (MIỄN PHÍ, không cần thẻ)
 
@@ -130,8 +135,8 @@ Toàn bộ dữ liệu (tài liệu đã tải, lịch sử chat, audio đã t�
 
 - Truy hồi dùng TF-IDF (từ khóa) thay vì embedding ngữ nghĩa — đủ tốt cho hầu hết
   câu hỏi nhưng kém hơn embedding thật với câu hỏi diễn đạt rất khác từ ngữ gốc.
-- OCR ảnh scan chạy qua Gemini Vision, nên cần cấu hình Google AI API key và có
-  thể phát sinh giới hạn lượt gọi theo gói Gemini đang dùng.
+- OCR ảnh scan ưu tiên Gemini Vision, tự chuyển sang OpenRouter Vision rồi
+  Tesseract offline khi các API không dùng được.
 - Giọng đọc audio overview phụ thuộc voice TTS có sẵn trên máy, chưa hỗ trợ giọng
   đọc tiếng Việt chất lượng cao kiểu cloud TTS.
 - Gói Gemini miễn phí có giới hạn số lượt gọi/phút và /ngày. Nếu gặp lỗi kiểu

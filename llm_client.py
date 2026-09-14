@@ -4,10 +4,13 @@ App chạy local, chỉ có traffic ra ngoài là gọi tới generativelanguage
 bằng API key do bạn tự cấu hình."""
 import json
 import re
+import base64
+import io
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import google.generativeai as genai
+from PIL import Image
 
 from config import load_config
 import retrieval
@@ -15,6 +18,11 @@ import retrieval
 MAX_TOKENS_CHAT = 5000
 MAX_TOKENS_LONG = 6000
 MAX_TOKENS_VISION = 12000
+VISION_PROMPT = (
+    "Đọc toàn bộ chữ trong ảnh tài liệu này. Chỉ trả về phần văn bản đã đọc, "
+    "giữ nguyên thứ tự đọc và xuống dòng hợp lý. Không thêm nhận xét, không bọc "
+    "trong Markdown, không mô tả hình ảnh và không đoán phần không nhìn rõ."
+)
 
 
 def append_custom_instruction(system, custom_instructions=None):
@@ -68,24 +76,47 @@ def _configure(runtime_config=None):
 
 
 def extract_text_from_image(image, runtime_config=None):
-    """Extract document text from a PIL image with Gemini Vision."""
-    model_name = _configure(runtime_config)
-    model = genai.GenerativeModel(model_name)
-    response = model.generate_content(
-        [
-            (
-                "Đọc toàn bộ chữ trong ảnh tài liệu này. Chỉ trả về phần văn bản đã đọc, "
-                "giữ nguyên thứ tự đọc và xuống dòng hợp lý. Không thêm nhận xét, không bọc "
-                "trong Markdown, không mô tả hình ảnh và không đoán phần không nhìn rõ."
-            ),
-            image,
-        ],
-        generation_config=genai.types.GenerationConfig(
-            max_output_tokens=MAX_TOKENS_VISION,
-            temperature=0,
-        ),
-    )
-    return (response.text or "").strip()
+    """Read an image using Gemini, OpenRouter Vision, then local OCR."""
+    cfg = load_config(runtime_config)
+    errors = []
+    if cfg.get("api_key"):
+        try:
+            model_name = _configure(runtime_config)
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(
+                [VISION_PROMPT, image],
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=MAX_TOKENS_VISION,
+                    temperature=0,
+                ),
+            )
+            text = (response.text or "").strip()
+            if text:
+                return text
+            errors.append("Gemini không trả về văn bản")
+        except Exception as exc:
+            errors.append(f"Gemini Vision: {exc}")
+
+    if cfg.get("openrouter_api_key"):
+        try:
+            return _openrouter_image_text(image, runtime_config=runtime_config)
+        except Exception as exc:
+            errors.append(f"OpenRouter Vision: {exc}")
+
+    try:
+        import pytesseract
+        text = pytesseract.image_to_string(image, lang="vie+eng").strip()
+        if not text:
+            text = pytesseract.image_to_string(image, lang="eng").strip()
+        if text:
+            return text
+        errors.append("Tesseract không nhận diện được chữ")
+    except Exception as exc:
+        errors.append(f"Tesseract OCR: {exc}")
+
+    if errors:
+        raise RuntimeError("Không đọc được ảnh bằng Gemini, OpenRouter hoặc OCR offline: " + " | ".join(errors))
+    raise NotConfiguredError("Chưa cấu hình API Vision và OCR offline chưa sẵn sàng.")
 
 
 def _strip_json_fence(text):
@@ -156,6 +187,45 @@ def _openrouter_text(system, prompt, max_tokens, json_mode=False, runtime_config
         payload,
     )
     return data["choices"][0]["message"]["content"]
+
+
+def _openrouter_image_text(image, runtime_config=None):
+    cfg = load_config(runtime_config)
+    if not cfg.get("openrouter_api_key"):
+        raise NotConfiguredError("Chưa có OpenRouter API key.")
+    if not isinstance(image, Image.Image):
+        image = Image.open(image)
+    image_buffer = io.BytesIO()
+    image.convert("RGB").save(image_buffer, format="JPEG", quality=88)
+    image_data = base64.b64encode(image_buffer.getvalue()).decode("ascii")
+    model = cfg.get("openrouter_vision_model") or "google/gemini-2.0-flash-001"
+    data = _post_json(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+            "Authorization": f"Bearer {cfg['openrouter_api_key']}",
+            "HTTP-Referer": "http://127.0.0.1:5050",
+            "X-Title": "NotebookLM Clone",
+        },
+        {
+            "model": model,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": VISION_PROMPT},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
+                ],
+            }],
+            "max_tokens": MAX_TOKENS_VISION,
+            "temperature": 0,
+        },
+    )
+    text = data["choices"][0]["message"].get("content", "")
+    if isinstance(text, list):
+        text = "".join(part.get("text", "") for part in text if isinstance(part, dict))
+    text = str(text).strip()
+    if not text:
+        raise RuntimeError("OpenRouter không trả về văn bản")
+    return text
 
 
 def _anthropic_text(system, prompt, max_tokens, runtime_config=None):
