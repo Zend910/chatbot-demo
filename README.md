@@ -148,3 +148,31 @@ Toàn bộ dữ liệu (tài liệu đã tải, lịch sử chat, audio đã t�
   ```
 - **App báo "Chưa cấu hình Google AI API key"**: vào **Cài đặt** trong app, dán
   lại key, bấm **Lưu**.
+
+## Checklist bảo mật trước khi host công khai (Render)
+
+Trước khi bấm deploy, đảm bảo đã làm đủ các bước sau:
+
+1. **Thu hồi mọi key cũ đã từng bị lộ** (Firebase service account, Google AI API
+   key, OpenRouter key, ...) rồi tạo key mới. Không bao giờ để các key này
+   trong file JSON/`.json`/`.env` commit kèm code — chỉ dán vào Render
+   **Environment Variables**.
+2. Đặt biến môi trường `FLASK_SECRET_KEY` bằng một chuỗi ngẫu nhiên dài, ví dụ:
+   ```
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+   App sẽ **từ chối khởi động** trên môi trường production nếu thiếu biến này
+   (tránh việc lỡ quên rồi chạy với secret mặc định ai cũng đoán được).
+3. (Tuỳ chọn) Đặt `ADMIN_INITIAL_PASSWORD` trước lần deploy đầu tiên để tự
+   chọn mật khẩu cho tài khoản `admin` mặc định. Nếu không đặt, app sẽ tự sinh
+   một mật khẩu ngẫu nhiên và in ra log lần khởi động đầu — hãy đăng nhập đổi
+   ngay. Từ nay mật khẩu admin **không còn bị reset** mỗi lần redeploy nữa.
+4. Đặt `FIREBASE_SERVICE_ACCOUNT_JSON` bằng **nội dung JSON** (không phải
+   đường dẫn file) khi deploy lên Render.
+5. Vào Firebase Console → Firestore → Rules, xác nhận rules **không** ở dạng
+   `allow read, write: if true;` (chế độ test) — kể cả khi app chỉ truy cập
+   Firestore qua Admin SDK ở backend, để phòng trường hợp sau này có code
+   phía client gọi thẳng Firestore.
+6. Không commit `.env`, `firebase-service-account*.json`, thư mục `data/`,
+   `uploads/` — các file này đã có trong `.gitignore`/`.dockerignore`, kiểm
+   tra `git status` trước khi push để chắc chắn không lọt file nào.

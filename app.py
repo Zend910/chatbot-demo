@@ -8,6 +8,8 @@ from datetime import timedelta
 from functools import wraps
 
 from flask import Flask, jsonify, request, send_from_directory, render_template, session, redirect, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 import storage
 import ingest
@@ -17,14 +19,41 @@ import audio
 from config import load_config, save_config
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "notebooklm-local-secret")
+
+_secret_key = os.environ.get("FLASK_SECRET_KEY", "").strip()
+_is_production = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
+if not _secret_key:
+    if _is_production:
+        # Không cho phép fallback về một chuỗi cố định khi chạy thật: bất kỳ ai
+        # đọc được mã nguồn (repo công khai, hoặc chỉ cần đoán) cũng biết được
+        # secret này và có thể tự ký ("forge") cookie phiên đăng nhập, kể cả
+        # giả làm admin. Nếu thiếu biến môi trường, dừng khởi động luôn thay vì
+        # chạy với một lỗ hổng nghiêm trọng.
+        raise RuntimeError(
+            "Thiếu biến môi trường FLASK_SECRET_KEY. Hãy đặt một chuỗi ngẫu nhiên dài "
+            "(ví dụ: python -c \"import secrets; print(secrets.token_hex(32))\") "
+            "trong Render Environment trước khi deploy."
+        )
+    _secret_key = "notebooklm-local-secret"  # chỉ dùng khi chạy local để dev
+app.secret_key = _secret_key
+
 app.config["MAX_CONTENT_LENGTH"] = 250 * 1024 * 1024  # 250MB mỗi lần upload
+# Cookie phiên đăng nhập: chỉ gửi qua HTTPS khi chạy thật, JS không đọc được,
+# và chặn phần lớn tấn công CSRF nhờ SameSite=Lax.
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = _is_production
 # "Remember me": khi người dùng tích chọn, phiên đăng nhập (cookie session) sẽ
 # được đánh dấu "permanent" và tồn tại tối đa 30 ngày thay vì bị xoá ngay khi
 # đóng trình duyệt. Khi KHÔNG tích, session vẫn là session-cookie bình thường
 # (mất khi đóng trình duyệt) — xem hàm login()/firebase_auth() bên dưới.
 app.permanent_session_lifetime = timedelta(days=30)
 storage.ensure_default_admin()
+
+# Giới hạn số lần thử đăng nhập/đăng ký để chống brute-force mật khẩu.
+# Lưu ý: bộ nhớ giới hạn ở đây là in-memory — đủ dùng cho 1 instance Render;
+# nếu sau này scale nhiều instance, cần chuyển sang storage_uri="redis://...".
+limiter = Limiter(get_remote_address, app=app, default_limits=[])
 
 ALLOWED_EXT = {".pdf", ".docx", ".txt", ".md"} | ingest.IMAGE_EXTS
 upload_progress = {}
@@ -193,6 +222,7 @@ def save_personalization():
 
 
 @app.route("/api/auth/register", methods=["POST"])
+@limiter.limit("10 per hour")
 def register():
     data = request.get_json(force=True) if request.data else {}
     username = (data.get("username") or "").strip()
@@ -212,6 +242,7 @@ def register():
 
 
 @app.route("/api/auth/login", methods=["POST"])
+@limiter.limit("10 per minute")
 def login():
     data = request.get_json(force=True) if request.data else {}
     username = (data.get("username") or "").strip()
@@ -286,6 +317,7 @@ def change_password():
 
 
 @app.route("/api/auth/firebase", methods=["POST"])
+@limiter.limit("10 per minute")
 def firebase_auth():
     try:
         import firebase_admin
@@ -1151,12 +1183,20 @@ def create_audio(nb_id):
 @app.route("/api/audio/<filename>")
 @login_required
 def get_audio(filename):
+    # Tên file có dạng "{notebook_id}_{random}.wav" (xem audio.generate_podcast_audio).
+    # Trước đây route này chỉ yêu cầu đăng nhập mà KHÔNG kiểm tra người dùng có
+    # thuộc notebook đó không — user A có thể nghe được audio của user B nếu
+    # đoán/biết được tên file. Giờ bắt buộc phải có quyền truy cập notebook
+    # tương ứng, giống mọi endpoint khác của notebook.
+    nb_id = filename.split("_", 1)[0]
+    try:
+        ensure_notebook_access(nb_id)
+    except (KeyError, PermissionError) as e:
+        return error_response(e, 404 if isinstance(e, KeyError) else 403)
     return send_from_directory(storage.AUDIO_DIR, filename)
 
 
-if __name__ == "__main__":
-    print("\n📓 NotebookLM-clone đang chạy tại: http://127.0.0.1:5050\n")
-    # threaded=True: bắt buộc để server có thể xử lý đồng thời nhiều request
-    # (ví dụ: vừa quét/OCR tài liệu ở luồng nền, vừa trả lời request kiểm tra
-    # tiến trình /api/uploads/<id>, vừa phục vụ các tab/notebook khác).
-    app.run(host="127.0.0.1", port=5050, debug=True, use_reloader=False, threaded=True)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    print(f"\n NotebookLM-clone đang chạy tại cổng: {port}")
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
