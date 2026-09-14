@@ -195,7 +195,18 @@ def _generate_with_fallback(system, prompt, max_tokens, json_mode=False, chat_hi
             model = genai.GenerativeModel(model_name, system_instruction=system)
             if chat_history:
                 history = [
-                    {"role": "user" if turn["role"] == "user" else "model", "parts": [turn["content"]]}
+                    {
+                        "role": "user" if turn["role"] == "user" else "model",
+                        "parts": [
+                            turn["content"]
+                            + (
+                                "\n\n[NGỮ CẢNH ẢNH ĐÃ ĐÍNH KÈM Ở LƯỢT TRƯỚC]\n"
+                                + turn["image_context"]
+                                if turn.get("image_context")
+                                else ""
+                            )
+                        ],
+                    }
                     for turn in chat_history[-6:]
                 ]
                 response = model.start_chat(history=history).send_message(
@@ -253,6 +264,16 @@ def answer_question(retrieved_chunks, question, chat_history, custom_instruction
             "snippet": c["text"][:220],
         }
     context_block = "\n\n".join(numbered) if numbered else "(Không có tài liệu nào được tải lên)"
+    recent_image_context = next(
+        (turn.get("image_context", "") for turn in reversed(chat_history or []) if turn.get("image_context")),
+        "",
+    )
+    image_history_block = (
+        "\n\nNGỮ CẢNH ẢNH TỪ LƯỢT TRƯỚC (được phép dùng khi câu hỏi hiện tại liên quan):\n"
+        + recent_image_context[:20000]
+        if recent_image_context
+        else ""
+    )
 
     system = append_custom_instruction(
         "Bạn là trợ lý nghiên cứu thân thiện, trả lời tự nhiên như một gia sư đang giải thích cho học sinh. "
@@ -266,7 +287,8 @@ def answer_question(retrieved_chunks, question, chat_history, custom_instruction
         "Các số này phải khớp với nhãn Nguồn bên dưới. Viết bằng tiếng Việt; dùng gạch đầu dòng cho danh sách, "
         "dùng bảng Markdown chỉ khi cần so sánh nhiều mục, không lạm dụng tiêu đề hay bảng."
         + MATH_FORMAT_INSTRUCTION
-        + f"\n\nCÁC ĐOẠN NGUỒN:\n{context_block}",
+        + f"\n\nCÁC ĐOẠN NGUỒN:\n{context_block}"
+        + image_history_block,
         custom_instructions,
     )
 

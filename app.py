@@ -1123,7 +1123,14 @@ def chat(nb_id):
     except Exception as e:
         return error_response(f"Lỗi gọi Gemini API: {e}", 502)
 
-    storage.append_chat(nb_id, "user", question, user_id=current_user()["id"], nb_role=current_user().get("role"))
+    storage.append_chat(
+        nb_id,
+        "user",
+        question,
+        user_id=current_user()["id"],
+        nb_role=current_user().get("role"),
+        image_context=image_context[:20000] or None,
+    )
     storage.append_chat(nb_id, "assistant", result["answer"], result["citations"], user_id=current_user()["id"], nb_role=current_user().get("role"))
     _record_usage(question, result.get("answer", ""))
     return jsonify(result)

@@ -494,7 +494,7 @@ def remove_document(nb_id, doc_id, user_id=None, role=None):
     ref.collection("documents").document(doc_id).delete()
 
 
-def append_chat(nb_id, role, content, citations=None, user_id=None, nb_role=None):
+def append_chat(nb_id, role, content, citations=None, user_id=None, nb_role=None, image_context=None):
     ref = _db().collection("notebooks").document(nb_id)
     doc = ref.get()
     if not doc.exists:
@@ -507,13 +507,16 @@ def append_chat(nb_id, role, content, citations=None, user_id=None, nb_role=None
         ref.collection("chat_history").order_by("seq", direction="DESCENDING").limit(1).stream()
     )
     next_seq = (last[0].to_dict().get("seq", 0) + 1) if last else 1
-    ref.collection("chat_history").document(f"{next_seq:08d}").set({
+    chat_turn = {
         "role": role,
         "content": content,
         "citations": citations or [],
         "ts": _now(),
         "seq": next_seq,
-    })
+    }
+    if image_context:
+        chat_turn["image_context"] = image_context
+    ref.collection("chat_history").document(f"{next_seq:08d}").set(chat_turn)
 
 
 def all_chunks(nb_id, user_id=None, role=None):
